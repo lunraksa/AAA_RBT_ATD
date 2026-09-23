@@ -1285,6 +1285,41 @@ body {
   border: 1px solid rgba(148, 163, 184, 0.25);
 }
 
+.session-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.22rem 0.6rem;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 0.75rem;
+  background: #f5f3ff;
+  color: #6d28d9;
+  border: 1px solid #ddd6fe;
+  white-space: nowrap;
+}
+
+.session-select-inline {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.775rem;
+  font-weight: 700;
+  width: 118px;
+  cursor: pointer;
+  background: #f5f3ff;
+  color: #6d28d9;
+  border: 1px solid #ddd6fe;
+  border-radius: 7px;
+  transition: all 0.2s ease;
+  outline: none;
+}
+.session-select-inline:hover {
+  background: #ede9fe;
+  border-color: #c4b5fd;
+}
+.session-select-inline:focus {
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.18);
+}
+
 .dash-grid-2col {
   display: grid;
   grid-template-columns: 3fr 2fr;
@@ -2099,6 +2134,7 @@ body.theme-purple {
   /* Search & Filter Controls Full Width on Mobile */
   #studentSearchInput,
   #studentBranchFilter,
+  #studentSessionFilter,
   #logSearchInput,
   #logBranchFilter,
   #logDateFilter,

@@ -162,6 +162,7 @@ async function initSchema() {
       name VARCHAR(150) NOT NULL,
       branch VARCHAR(50) DEFAULT 'Funmall',
       class VARCHAR(50) NOT NULL,
+      session VARCHAR(50) DEFAULT 'Session 1',
       department VARCHAR(50) DEFAULT 'Saturday',
       email VARCHAR(150),
       photo TEXT,
@@ -195,13 +196,14 @@ async function initSchema() {
       deleted_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
     );
 
+    ALTER TABLE students ADD COLUMN IF NOT EXISTS branch VARCHAR(50) DEFAULT 'Funmall';
+    ALTER TABLE deleted_students ADD COLUMN IF NOT EXISTS branch VARCHAR(50) DEFAULT 'Funmall';
+    ALTER TABLE students ADD COLUMN IF NOT EXISTS session VARCHAR(50) DEFAULT 'Session 1';
+
     CREATE INDEX IF NOT EXISTS idx_logs_date ON attendance_logs(date);
     CREATE INDEX IF NOT EXISTS idx_logs_student ON attendance_logs(student_id);
     CREATE INDEX IF NOT EXISTS idx_students_class ON students(class);
     CREATE INDEX IF NOT EXISTS idx_students_branch ON students(branch);
-
-    ALTER TABLE students ADD COLUMN IF NOT EXISTS branch VARCHAR(50) DEFAULT 'Funmall';
-    ALTER TABLE deleted_students ADD COLUMN IF NOT EXISTS branch VARCHAR(50) DEFAULT 'Funmall';
   `;
   try {
     await pool.query(schemaQuery);
@@ -328,7 +330,7 @@ app.get('/api/students', async (req, res) => {
 
 // 6. Students: Add or Update Student
 app.post('/api/students', async (req, res) => {
-  const { id, name, branch, class: className, department, email, photo, descriptor, schedule, sessionsPaid, remark } = req.body;
+  const { id, name, branch, class: className, session, department, email, photo, descriptor, schedule, sessionsPaid, remark } = req.body;
   if (!id || !name) {
     return res.status(400).json({ error: 'Student ID and Full Name are required.' });
   }
@@ -338,6 +340,7 @@ app.post('/api/students', async (req, res) => {
     name,
     branch: branch || 'Funmall',
     class: className || 'AI',
+    session: session || 'Session 1',
     department: department || 'Saturday',
     schedule: schedule || 'Saturday Morning (08:30-10:00AM)',
     sessionsPaid: sessionsPaid || '11 SESSIONS',
@@ -361,13 +364,13 @@ app.post('/api/students', async (req, res) => {
     // Save to Postgres if connected
     if (isPgConnected) {
       const query = `
-        INSERT INTO students (id, name, branch, class, department, email, photo, descriptor)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        INSERT INTO students (id, name, branch, class, session, department, email, photo, descriptor)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         ON CONFLICT (id) 
-        DO UPDATE SET name = $2, branch = $3, class = $4, department = $5, email = $6, photo = EXCLUDED.photo, descriptor = EXCLUDED.descriptor
+        DO UPDATE SET name = $2, branch = $3, class = $4, session = $5, department = $6, email = $7, photo = EXCLUDED.photo, descriptor = EXCLUDED.descriptor
         RETURNING *;
       `;
-      const values = [id, name, studentObj.branch, studentObj.class, studentObj.department, studentObj.email, studentObj.photo, JSON.stringify(studentObj.descriptor)];
+      const values = [id, name, studentObj.branch, studentObj.class, studentObj.session, studentObj.department, studentObj.email, studentObj.photo, JSON.stringify(studentObj.descriptor)];
       await pool.query(query, values);
     }
 

@@ -20,7 +20,7 @@
   <meta http-equiv="Expires" content="0">
 
   <!-- Custom Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=20260923_v2">
+  <link rel="stylesheet" href="styles.css?v=20260923_v3">
 
   <!-- HTML2PDF Library for Direct PDF Export (Local Fast Bundle) -->
   <script src="html2pdf.bundle.min.js"></script>
@@ -494,7 +494,7 @@
 
             <div style="margin-bottom:1.25rem; display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
               <input type="text" id="studentSearchInput" class="form-input" style="width:320px;"
-                placeholder="Search by name, ID, class, or branch..." />
+                placeholder="Search by name, ID, class, session, or branch..." />
               <div style="display:flex; align-items:center; gap:0.4rem;">
                 <label for="studentBranchFilter"
                   style="font-size:0.8rem; font-weight:600; color:var(--text-secondary); white-space:nowrap;">Branch:</label>
@@ -509,6 +509,25 @@
                   <option value="__new__">Create Branch</option>
                 </select>
               </div>
+              <div style="display:flex; align-items:center; gap:0.4rem;">
+                <label for="studentSessionFilter"
+                  style="font-size:0.8rem; font-weight:600; color:var(--text-secondary); white-space:nowrap;">Session:</label>
+                <select id="studentSessionFilter" class="form-input"
+                  style="width:160px; font-weight:600; padding:0.45rem 0.75rem; cursor:pointer;">
+                  <option value="all">All Sessions</option>
+                  <option value="Session 1">Session 1</option>
+                  <option value="Session 2">Session 2</option>
+                  <option value="Session 3">Session 3</option>
+                  <option value="Session 4">Session 4</option>
+                  <option value="Session 5">Session 5</option>
+                  <option value="Session 6">Session 6</option>
+                  <option value="Session 7">Session 7</option>
+                  <option value="Session 8">Session 8</option>
+                  <option value="Session 9">Session 9</option>
+                  <option value="Session 10">Session 10</option>
+                  <option value="Session 11">Session 11</option>
+                </select>
+              </div>
             </div>
 
             <div class="table-responsive">
@@ -519,6 +538,7 @@
                     <th>Student ID</th>
                     <th>Branch</th>
                     <th>Class / Grade</th>
+                    <th>Session</th>
                     <th>Schedule Day</th>
                     <th>Actions</th>
                   </tr>
@@ -828,6 +848,23 @@
                   <option value="Level 3">Level 3</option>
                   <option value="Level 4">Level 4</option>
                   <option value="Level 5">Level 5</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="regSession">Session *</label>
+                <select id="regSession" class="form-select" required style="font-weight:600;">
+                  <option value="Session 1">Session 1</option>
+                  <option value="Session 2">Session 2</option>
+                  <option value="Session 3">Session 3</option>
+                  <option value="Session 4">Session 4</option>
+                  <option value="Session 5">Session 5</option>
+                  <option value="Session 6">Session 6</option>
+                  <option value="Session 7">Session 7</option>
+                  <option value="Session 8">Session 8</option>
+                  <option value="Session 9">Session 9</option>
+                  <option value="Session 10">Session 10</option>
+                  <option value="Session 11">Session 11</option>
                 </select>
               </div>
 
@@ -1744,8 +1781,8 @@
   <script src="firebase-client.js"></script>
   <script src="postgres-client.js"></script>
   <script src="db.js"></script>
-  <script src="storage.js?v=20260923_v2"></script>
-  <script src="app.js?v=20260923_v2"></script>
+  <script src="storage.js?v=20260923_v3"></script>
+  <script src="app.js?v=20260923_v3"></script>
 </body>
 
 </html>

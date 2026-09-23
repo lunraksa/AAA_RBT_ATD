@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS students (
   name VARCHAR(150) NOT NULL,
   branch VARCHAR(50) DEFAULT 'Funmall',
   class VARCHAR(50) NOT NULL,
+  session VARCHAR(50) DEFAULT 'Session 1',
   department VARCHAR(50) DEFAULT 'Saturday',
   email VARCHAR(150),
   photo TEXT,

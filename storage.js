@@ -885,6 +885,9 @@ class StorageManager {
         if (!s.branch) {
           s.branch = defaultBranch;
         }
+        if (!s.session) {
+          s.session = 'Session 1';
+        }
       });
       students.sort((a, b) => {
         const numA = parseInt(String(a.id).replace(/\D/g, ''), 10) || 0;

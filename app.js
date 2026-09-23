@@ -394,9 +394,10 @@ class AttendanceApp {
       });
     }
 
-    // Student Search Input & Branch Filter
+    // Student Search Input, Branch Filter & Session Filter
     const studentSearchInput = document.getElementById('studentSearchInput');
     const studentBranchFilter = document.getElementById('studentBranchFilter');
+    const studentSessionFilter = document.getElementById('studentSessionFilter');
     const triggerStudentFilter = () => {
       const q = studentSearchInput ? studentSearchInput.value : '';
       this.renderStudentTable(q);
@@ -413,6 +414,9 @@ class AttendanceApp {
         }
         triggerStudentFilter();
       });
+    }
+    if (studentSessionFilter) {
+      studentSessionFilter.addEventListener('change', triggerStudentFilter);
     }
 
     // Attendance Log Search / Date Filter
@@ -1224,6 +1228,7 @@ class AttendanceApp {
     const regName = document.getElementById('regName');
     const regId = document.getElementById('regId');
     const regClass = document.getElementById('regClass');
+    const regSession = document.getElementById('regSession');
     const regDept = document.getElementById('regDept');
     const regBranch = document.getElementById('regBranch');
     const regEmail = document.getElementById('regEmail');
@@ -1234,6 +1239,7 @@ class AttendanceApp {
     if (regName) { regName.value = student.name || ''; regName.disabled = false; }
     if (regId) { regId.value = student.id || ''; }
     if (regClass) { regClass.value = student.class || ''; regClass.disabled = false; }
+    if (regSession) { regSession.value = student.session || 'Session 1'; regSession.disabled = false; }
     if (regDept) { regDept.value = student.department || ''; regDept.disabled = false; }
     this.populateBranchDropdowns();
     if (regBranch) { regBranch.value = student.branch || 'Funmall'; regBranch.disabled = false; }
@@ -1276,6 +1282,7 @@ class AttendanceApp {
     const regName = document.getElementById('regName');
     const regId = document.getElementById('regId');
     const regClass = document.getElementById('regClass');
+    const regSession = document.getElementById('regSession');
     const regDept = document.getElementById('regDept');
     const regBranch = document.getElementById('regBranch');
     const regEmail = document.getElementById('regEmail');
@@ -1285,6 +1292,7 @@ class AttendanceApp {
     if (regName) { regName.value = student.name || ''; regName.disabled = true; }
     if (regId) { regId.value = student.id || ''; }
     if (regClass) { regClass.value = student.class || ''; regClass.disabled = true; }
+    if (regSession) { regSession.value = student.session || 'Session 1'; regSession.disabled = true; }
     if (regDept) { regDept.value = student.department || ''; regDept.disabled = true; }
     this.populateBranchDropdowns();
     if (regBranch) { regBranch.value = student.branch || 'Funmall'; regBranch.disabled = true; }
@@ -1330,10 +1338,20 @@ class AttendanceApp {
 
     let students = window.storageManager.getStudents();
     const branchFilter = document.getElementById('studentBranchFilter')?.value || 'all';
+    const sessionFilter = document.getElementById('studentSessionFilter')?.value || 'all';
 
     // Apply branch dropdown filter
     if (branchFilter && branchFilter !== 'all') {
       students = students.filter(s => (s.branch || 'Funmall') === branchFilter);
+    }
+
+    // Apply session dropdown filter (supports Session 1-11 or session1-session11)
+    if (sessionFilter && sessionFilter !== 'all') {
+      students = students.filter(s => {
+        const studentSess = (s.session || 'Session 1').trim().toLowerCase().replace(/\s+/g, '');
+        const targetSess = sessionFilter.trim().toLowerCase().replace(/\s+/g, '');
+        return studentSess === targetSess || (s.session || 'Session 1') === sessionFilter;
+      });
     }
 
     if (searchQuery.trim()) {
@@ -1346,13 +1364,14 @@ class AttendanceApp {
                sid.includes(q) ||
                (numQ && snum === numQ) ||
                s.class.toLowerCase().includes(q) ||
+               ((s.session || 'Session 1').toLowerCase().includes(q)) ||
                (s.branch && s.branch.toLowerCase().includes(q)) ||
                (s.department && s.department.toLowerCase().includes(q));
       });
     }
 
     if (students.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:2rem; color:var(--text-muted);">No student records found matching search or selected branch.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:2rem; color:var(--text-muted);">No student records found matching search or selected filters.</td></tr>`;
       return;
     }
 
@@ -1369,6 +1388,7 @@ class AttendanceApp {
                             cls === 'Level 5' ? 'background:#fae8ff; color:#86198f;' :
                             'background:#f1f5f9; color:#475569;';
       const dayColor = s.department === 'Sunday' ? 'color:#ec4899;' : 'color:#2563eb;';
+      const currentSession = s.session || 'Session 1';
 
       return `
         <tr>
@@ -1388,6 +1408,19 @@ class AttendanceApp {
             <span class="dash-trend-badge" style="${clsBadgeClass} font-size:0.75rem; padding:0.25rem 0.6rem;">
               ${cls}
             </span>
+          </td>
+          <td>
+            ${this.isAdmin ? `
+              <select class="session-select-inline" onchange="app.updateStudentSession('${s.id}', this.value)" title="Change Session for ${s.name}">
+                ${Array.from({ length: 11 }, (_, i) => `Session ${i + 1}`).map(sess => `
+                  <option value="${sess}" ${currentSession === sess ? 'selected' : ''}>${sess}</option>
+                `).join('')}
+              </select>
+            ` : `
+              <span class="session-badge">
+                ${currentSession}
+              </span>
+            `}
           </td>
           <td>
             <span style="font-weight:700; font-size:0.825rem; ${dayColor}">
@@ -1413,6 +1446,23 @@ class AttendanceApp {
         </tr>
       `;
     }).join('');
+  }
+
+  // Update student session directly from roster table or controls
+  updateStudentSession(studentId, newSession) {
+    if (!this.checkAdminPermission('modify student session')) return;
+    if (!window.storageManager) return;
+    const res = window.storageManager.updateStudentProfile(studentId, { session: newSession });
+    if (res && res.success) {
+      this.playSound('success');
+      this.showToast('Session Updated!', `${res.student.name} (${studentId}) assigned to ${newSession}.`, 'success');
+      if (window.firebaseClient) {
+        window.firebaseClient.logAdminActivity(
+          'STUDENT_SESSION_UPDATED',
+          `Updated student ${res.student.name} (${studentId}) session to ${newSession}.`
+        );
+      }
+    }
   }
 
 
@@ -2942,6 +2992,8 @@ class AttendanceApp {
     const autoId = this.getNextUniqueStudentId();
     const regIdInput = document.getElementById('regId');
     if (regIdInput) regIdInput.value = autoId;
+    const regSessionInput = document.getElementById('regSession');
+    if (regSessionInput) regSessionInput.value = 'Session 1';
     const regDeptInput = document.getElementById('regDept');
     if (regDeptInput) regDeptInput.value = 'Saturday';
     this.populateBranchDropdowns();
@@ -2968,6 +3020,7 @@ class AttendanceApp {
 
     if (regName) regName.disabled = false;
     if (regClass) regClass.disabled = false;
+    if (regSessionInput) regSessionInput.disabled = false;
     if (regDeptInput) regDeptInput.disabled = false;
     if (regBranchInput) regBranchInput.disabled = false;
     if (regEmail) regEmail.disabled = false;
@@ -2999,6 +3052,7 @@ class AttendanceApp {
     }
 
     const className = document.getElementById('regClass')?.value || 'AI';
+    const sessionVal = document.getElementById('regSession')?.value || 'Session 1';
     const dept = document.getElementById('regDept')?.value || 'Saturday';
     const branch = document.getElementById('regBranch')?.value || 'Funmall';
     const email = document.getElementById('regEmail')?.value || `${id.toLowerCase()}@school.edu`;
@@ -3011,6 +3065,7 @@ class AttendanceApp {
       name,
       branch: branch || 'Funmall',
       class: className,
+      session: sessionVal,
       department: dept || 'Saturday',
       email: email,
       photo: photoUrl || this.registrationPhotoData || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80'
