@@ -5462,16 +5462,22 @@ class AttendanceApp {
 
     const meta = this.getLessonLinkMeta(cleanUrl);
 
+    // Strictly open in a NEW TAB only - NEVER replace current system window
     try {
-      const win = window.open(cleanUrl, '_blank', 'noopener,noreferrer');
-      if (!win) {
-        this.showToast('Opening Link', `Opening ${meta.label}... (If blocked, please allow popups)`, 'info');
-        window.location.href = cleanUrl;
-      } else {
-        this.showToast('Opening Lesson', `Launched ${meta.label} in new tab.`, 'success');
-      }
+      const link = document.createElement('a');
+      link.href = cleanUrl;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      this.showToast('Opened in New Tab', `Opened ${meta.label} in a new tab.`, 'success');
     } catch (err) {
-      window.location.href = cleanUrl;
+      try {
+        window.open(cleanUrl, '_blank', 'noopener,noreferrer');
+      } catch (e) {
+        this.showToast('Open Blocked', `Please allow popups to open: ${cleanUrl}`, 'warning');
+      }
     }
   }
 
@@ -5485,7 +5491,18 @@ class AttendanceApp {
       this.showToast('No Link Configured', 'Please provide a valid Canva, PDF, or lesson web link.', 'warning');
       return;
     }
-    window.open(cleanUrl, '_blank', 'noopener,noreferrer');
+    // Strictly open in new tab - never replace current page
+    try {
+      const link = document.createElement('a');
+      link.href = cleanUrl;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      window.open(cleanUrl, '_blank', 'noopener,noreferrer');
+    }
   }
 
   copySessionLink(arg1, arg2 = null) {
