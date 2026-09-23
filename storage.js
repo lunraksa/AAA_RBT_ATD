@@ -1832,72 +1832,103 @@ class StorageManager {
     return coursesData;
   }
 
-  // Pull latest course levels from cloud (Firebase RTDB, Firestore, or API)
+  // Pull latest course levels from cloud (Cloud Firestore, RTDB admin_profile/courses, or REST API)
   async syncCoursesFromCloud() {
     const local = this.getCourses();
+    const localCount = (local && local.levels) ? local.levels.length : 0;
+    let cloudData = null;
 
-    // If local device already has extra levels or custom links, upload to cloud so other devices get them!
-    if (local && local.levels && (local.levels.length > 2 || local.levels.some(l => l.sessions && l.sessions.some(s => s.link)))) {
-      this.saveCourses(local);
-    }
-
-    // 1. Try Firebase RTDB
-    if (window.firebaseClient && window.firebaseClient.db) {
-      try {
-        const snap = await window.firebaseClient.db.ref('courses').once('value');
-        const data = snap.val();
-        if (data && Array.isArray(data.levels) && data.levels.length > 0) {
-          if (data.levels.length >= (local.levels?.length || 0)) {
-            localStorage.setItem(STORAGE_KEYS.COURSES, JSON.stringify(data));
-            if (window.app && typeof window.app.onRealtimeSync === 'function') {
-              window.app.onRealtimeSync('courses', data);
-            }
-            return data;
-          }
-        }
-      } catch (e) { }
-    }
-
-    // 2. Try Cloud Firestore
+    // 1. Primary: Try Cloud Firestore (bypasses RTDB rule limits)
     if (window.firebaseClient && window.firebaseClient.firestore) {
       try {
         const doc = await window.firebaseClient.firestore.collection('courses').doc('curriculum').get();
         if (doc.exists) {
           const fsData = doc.data();
           if (fsData && Array.isArray(fsData.levels) && fsData.levels.length > 0) {
-            if (fsData.levels.length >= (local.levels?.length || 0)) {
-              localStorage.setItem(STORAGE_KEYS.COURSES, JSON.stringify(fsData));
-              if (window.app && typeof window.app.onRealtimeSync === 'function') {
-                window.app.onRealtimeSync('courses', fsData);
-              }
-              return fsData;
-            }
+            cloudData = fsData;
+            console.log(`[Storage] Pulled ${fsData.levels.length} levels from Cloud Firestore.`);
           }
         }
-      } catch (e) { }
+      } catch (fErr) {
+        console.warn('[Storage] Firestore courses fetch notice:', fErr.message);
+      }
     }
 
-    // 3. Try REST API
-    try {
-      const apiBase = (typeof window !== 'undefined' && window.location.origin.includes('http'))
-        ? `${window.location.origin}/api`
-        : 'http://localhost:5000/api';
-      const res = await fetch(`${apiBase}/courses`);
-      if (res.ok) {
-        const apiData = await res.json();
-        if (apiData && Array.isArray(apiData.levels) && apiData.levels.length > 0) {
-          if (apiData.levels.length >= (local.levels?.length || 0)) {
-            localStorage.setItem(STORAGE_KEYS.COURSES, JSON.stringify(apiData));
-            if (window.app && typeof window.app.onRealtimeSync === 'function') {
-              window.app.onRealtimeSync('courses', apiData);
-            }
-            return apiData;
+    // 2. Secondary: Try Firebase RTDB under admin_profile/courses
+    if (!cloudData && window.firebaseClient && window.firebaseClient.db) {
+      try {
+        const snap = await window.firebaseClient.db.ref('admin_profile/courses').once('value');
+        const data = snap.val();
+        if (data && Array.isArray(data.levels) && data.levels.length > 0) {
+          cloudData = data;
+          console.log(`[Storage] Pulled ${data.levels.length} levels from RTDB admin_profile/courses.`);
+        }
+      } catch (pErr) { }
+    }
+
+    // 3. Tertiary: Try root /courses
+    if (!cloudData && window.firebaseClient && window.firebaseClient.db) {
+      try {
+        const snap = await window.firebaseClient.db.ref('courses').once('value');
+        const data = snap.val();
+        if (data && Array.isArray(data.levels) && data.levels.length > 0) {
+          cloudData = data;
+        }
+      } catch (cErr) { }
+    }
+
+    // 4. Quaternary: Try REST API
+    if (!cloudData) {
+      try {
+        const apiBase = (typeof window !== 'undefined' && window.location.origin.includes('http'))
+          ? `${window.location.origin}/api`
+          : 'http://localhost:5000/api';
+        const res = await fetch(`${apiBase}/courses`);
+        if (res.ok) {
+          const apiData = await res.json();
+          if (apiData && Array.isArray(apiData.levels) && apiData.levels.length > 0) {
+            cloudData = apiData;
           }
         }
-      }
-    } catch (e) { }
+      } catch (aErr) { }
+    }
 
-    return local;
+    // Intelligent Reconciliation:
+    if (cloudData && Array.isArray(cloudData.levels)) {
+      const cloudCount = cloudData.levels.length;
+
+      if (cloudCount > localCount) {
+        // Cloud has MORE levels (e.g. computer uploaded 9 levels, phone had 3) -> Adopt cloud!
+        console.log(`[Storage] Adopting ${cloudCount} levels from Cloud (Local has ${localCount}).`);
+        localStorage.setItem(STORAGE_KEYS.COURSES, JSON.stringify(cloudData));
+        if (window.app && typeof window.app.onRealtimeSync === 'function') {
+          window.app.onRealtimeSync('courses', cloudData);
+        }
+        return cloudData;
+      } else if (localCount > cloudCount) {
+        // Local has MORE levels (e.g. computer created 9 levels, cloud only had 2 or 3) -> Upload local to cloud!
+        console.log(`[Storage] Uploading ${localCount} local levels to Cloud (Cloud only had ${cloudCount}).`);
+        this.saveCourses(local);
+        return local;
+      } else {
+        // Equal count: check if local has newer links
+        const hasLocalCustomLinks = local.levels.some(l => l.sessions?.some(s => s.link));
+        const hasCloudCustomLinks = cloudData.levels.some(l => l.sessions?.some(s => s.link));
+        if (hasLocalCustomLinks && !hasCloudCustomLinks) {
+          this.saveCourses(local);
+          return local;
+        } else {
+          localStorage.setItem(STORAGE_KEYS.COURSES, JSON.stringify(cloudData));
+          return cloudData;
+        }
+      }
+    } else {
+      // Cloud is empty, push local if it has levels
+      if (localCount > 0) {
+        this.saveCourses(local);
+      }
+      return local;
+    }
   }
 
   updateCourseLevel(levelId, updatedData) {

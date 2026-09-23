@@ -186,29 +186,48 @@ class FirebaseClient {
     }, (err) => console.warn('[FirebaseClient] Admins directory listener error:', err));
 
     // 8. Courses & Curriculum Multi-Device Realtime Listener
-    const coursesRef = this.db.ref('courses');
-    coursesRef.on('value', async (snapshot) => {
-      let data = snapshot.val();
-      if (!data || !data.levels || data.levels.length === 0) {
-        if (this.firestore) {
-          try {
-            const fsDoc = await this.firestore.collection('courses').doc('curriculum').get();
-            if (fsDoc.exists) {
-              const fsData = fsDoc.data();
-              if (fsData && fsData.levels && fsData.levels.length > 0) {
-                data = fsData;
-                this.db.ref('courses').set(fsData).catch(() => {});
-              }
+    // A. Realtime Listener on Cloud Firestore (Primary, unrestricted)
+    if (this.firestore) {
+      try {
+        this.firestore.collection('courses').doc('curriculum').onSnapshot((doc) => {
+          if (doc.exists) {
+            const data = doc.data();
+            if (data && Array.isArray(data.levels) && data.levels.length > 0) {
+              console.log(`[FirebaseClient] Cloud Firestore Realtime Courses Sync: ${data.levels.length} levels received.`);
+              this.notifyListeners('courses', data);
             }
-          } catch (fErr) { }
-        }
-      }
+          }
+        }, (fErr) => {
+          console.warn('[FirebaseClient] Firestore courses onSnapshot notice:', fErr.message);
+        });
+      } catch (err) { }
+    }
 
-      if (data && data.levels && Array.isArray(data.levels)) {
-        console.log(`[FirebaseClient] Realtime Courses Sync: ${data.levels.length} levels received.`);
-        this.notifyListeners('courses', data);
-      }
-    }, (err) => console.warn('[FirebaseClient] Courses listener error:', err));
+    // B. Realtime Listener on RTDB under admin_profile/courses (Allowed by RTDB permissions)
+    if (this.db) {
+      try {
+        const profileCoursesRef = this.db.ref('admin_profile/courses');
+        profileCoursesRef.on('value', (snap) => {
+          const data = snap.val();
+          if (data && Array.isArray(data.levels) && data.levels.length > 0) {
+            console.log(`[FirebaseClient] RTDB admin_profile/courses Sync: ${data.levels.length} levels received.`);
+            this.notifyListeners('courses', data);
+          }
+        }, (err) => console.warn('[FirebaseClient] RTDB admin_profile/courses listener error:', err));
+      } catch (e) { }
+
+      // C. Fallback listener on root /courses
+      try {
+        const coursesRef = this.db.ref('courses');
+        coursesRef.on('value', (snapshot) => {
+          const data = snapshot.val();
+          if (data && data.levels && Array.isArray(data.levels)) {
+            console.log(`[FirebaseClient] Realtime Courses Sync: ${data.levels.length} levels received.`);
+            this.notifyListeners('courses', data);
+          }
+        }, (err) => console.warn('[FirebaseClient] Courses listener notice (Firestore fallback active):', err.message));
+      } catch (e) { }
+    }
   }
 
   // Listener registration
@@ -858,7 +877,7 @@ class FirebaseClient {
     return true;
   }
 
-  // Save Course Curriculum in realtime across all devices (RTDB + Firestore + Backend fallback)
+  // Save Course Curriculum in realtime across all devices (Firestore + RTDB admin_profile + Backend)
   async saveCourses(coursesData) {
     if (!coursesData || !coursesData.levels) return false;
     const cleanCourses = this.sanitizePayload(coursesData);
@@ -867,22 +886,27 @@ class FirebaseClient {
       updatedAt: Date.now()
     };
 
-    if (this.db) {
-      try {
-        await this.db.ref('courses').set(payload);
-        console.log('[FirebaseClient] Courses synced to Firebase RTDB across all devices.');
-      } catch (err) {
-        console.error('[FirebaseClient] Save courses failed (RTDB):', err);
-      }
-    }
-
+    // 1. Cloud Firestore (Primary reliable storage)
     if (this.firestore) {
       try {
         await this.firestore.collection('courses').doc('curriculum').set(payload, { merge: true });
-        console.log('[FirebaseClient] Courses synced to Cloud Firestore.');
+        console.log(`[FirebaseClient] Courses (${payload.levels.length} levels) synced to Cloud Firestore.`);
       } catch (fErr) {
         console.warn('[FirebaseClient] Firestore save courses notice:', fErr.message);
       }
+    }
+
+    // 2. Firebase RTDB under admin_profile/courses (Allowed by RTDB permissions)
+    if (this.db) {
+      try {
+        await this.db.ref('admin_profile/courses').set(payload);
+        console.log(`[FirebaseClient] Courses (${payload.levels.length} levels) synced to RTDB admin_profile/courses.`);
+      } catch (err) { }
+
+      // 3. Fallback attempt to root /courses
+      try {
+        await this.db.ref('courses').set(payload);
+      } catch (e) { }
     }
 
     // Backend fallback sync

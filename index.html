@@ -20,7 +20,7 @@
   <meta http-equiv="Expires" content="0">
 
   <!-- Custom Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=20260923_v7">
+  <link rel="stylesheet" href="styles.css?v=20260923_v8">
 
   <!-- HTML2PDF Library for Direct PDF Export (Local Fast Bundle) -->
   <script src="html2pdf.bundle.min.js"></script>
@@ -811,6 +811,10 @@
                 <button id="addCourseLevelBtn" class="btn btn-secondary" style="font-size:0.825rem; padding:0.45rem 0.85rem;"
                   onclick="app.openAddCourseLevelModal()">
                   + Add New Level
+                </button>
+                <button id="syncCourseBtn" class="btn btn-secondary" style="font-size:0.825rem; padding:0.45rem 0.85rem;"
+                  onclick="app.handleManualCourseSync()" title="Sync course levels from cloud across mobile and computer">
+                  🔄 Cloud Sync
                 </button>
                 <button id="saveCourseSessionsBtn" class="btn btn-primary" style="font-size:0.825rem; padding:0.45rem 0.85rem;"
                   onclick="app.handleSaveAllCourseSessions()">
@@ -1860,8 +1864,8 @@
   <script src="firebase-client.js"></script>
   <script src="postgres-client.js"></script>
   <script src="db.js"></script>
-  <script src="storage.js?v=20260923_v7"></script>
-  <script src="app.js?v=20260923_v7"></script>
+  <script src="storage.js?v=20260923_v8"></script>
+  <script src="app.js?v=20260923_v8"></script>
 </body>
 
 </html>

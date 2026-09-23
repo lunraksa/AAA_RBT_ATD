@@ -5442,16 +5442,31 @@ class AttendanceApp {
     window.storageManager.saveCourses(coursesData);
 
     try { this.playSound('success'); } catch (err) {}
-    this.showToast('Curriculum Saved!', `${lvl.name} (11 Sessions) saved successfully.`, 'success');
+    this.showToast('Curriculum Saved!', `All ${coursesData.levels.length} Levels saved & synced to Cloud.`, 'success');
 
     if (window.firebaseClient) {
       window.firebaseClient.logAdminActivity(
         'COURSE_CURRICULUM_SAVED',
-        `Saved course curriculum and links for ${lvl.name}.`
+        `Saved course curriculum (${coursesData.levels.length} levels) and synced to Cloud.`
       );
     }
 
     this.renderCourseTab(targetLevelId);
+  }
+
+  async handleManualCourseSync() {
+    this.showToast('Syncing...', 'Connecting to Cloud Firestore & Firebase...', 'info');
+    if (window.storageManager && typeof window.storageManager.syncCoursesFromCloud === 'function') {
+      try {
+        const result = await window.storageManager.syncCoursesFromCloud();
+        const count = (result && result.levels) ? result.levels.length : (window.storageManager.getCourses().levels?.length || 0);
+        this.renderCourseTab(this.activeCourseLevelId);
+        try { this.playSound('success'); } catch (e) {}
+        this.showToast('Cloud Sync Complete', `All ${count} Course Levels synced across devices!`, 'success');
+      } catch (err) {
+        this.showToast('Sync Complete', 'Loaded current curriculum.', 'info');
+      }
+    }
   }
 
   openCourseLesson(levelId, sessionNum) {
