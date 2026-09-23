@@ -5143,16 +5143,15 @@ class AttendanceApp {
             <tr>
               <th style="width:110px;">Session</th>
               <th style="min-width:240px;">Lesson Topic / Title</th>
-              <th style="min-width:320px;">Lesson Link (Canva, Slides, Video, LMS)</th>
-              <th style="width:200px; text-align:center;">Launch & Actions</th>
+              <th style="min-width:320px;">Lesson Link (Canva, PDF, Drive, Slides, Video)</th>
+              <th style="width:210px; text-align:center;">Launch & Actions</th>
             </tr>
           </thead>
           <tbody>
             ${sessions.map((s) => {
               const link = (s.link || '').trim();
-              const hasLink = Boolean(link && link.startsWith('http'));
-              const isCanva = link.toLowerCase().includes('canva');
-              const launchBtnText = isCanva ? '🎨 Open Canva' : '🔗 Open Lesson';
+              const meta = this.getLessonLinkMeta(link);
+              const normalizedLink = this.normalizeLessonUrl(link);
 
               return `
                 <tr>
@@ -5175,18 +5174,25 @@ class AttendanceApp {
                   </td>
                   <td>
                     ${this.isAdmin ? `
-                      <div style="display:flex; align-items:center; gap:0.4rem;">
-                        <span style="font-size:0.9rem;" title="Canva or Lesson URL">🎨</span>
-                        <input type="url" id="course_link_${currentLevel.id}_${s.session}" class="form-input"
-                          value="${link}" placeholder="Paste Canva or lesson link (https://...)"
-                          style="padding:0.4rem 0.65rem; font-size:0.825rem; font-family:monospace; width:100%; box-sizing:border-box;"
-                          onchange="app.updateCourseSessionField('${currentLevel.id}', ${s.session}, 'link', this.value)" />
+                      <div style="display:flex; align-items:center; gap:0.45rem;">
+                        <span id="course_icon_${currentLevel.id}_${s.session}" style="font-size:1.1rem; min-width:26px; text-align:center; user-select:none;" title="${meta.label}">
+                          ${meta.icon}
+                        </span>
+                        <input type="text" id="course_link_${currentLevel.id}_${s.session}" class="form-input"
+                          value="${link}" placeholder="Paste Canva, PDF, Drive, or website link (e.g. canva.link/... or doc.pdf)"
+                          style="padding:0.45rem 0.65rem; font-size:0.825rem; font-family:monospace; width:100%; box-sizing:border-box;"
+                          oninput="app.handleCourseLinkInput('${currentLevel.id}', ${s.session}, this.value)"
+                          onpaste="setTimeout(() => app.handleCourseLinkInput('${currentLevel.id}', ${s.session}, this.value), 50)"
+                          onchange="app.handleCourseLinkInput('${currentLevel.id}', ${s.session}, this.value)" />
                       </div>
                     ` : `
-                      ${hasLink ? `
-                        <a href="${link}" target="_blank" rel="noopener noreferrer" style="font-size:0.825rem; color:var(--accent-blue); text-decoration:none; font-family:monospace; word-break:break-all;">
-                          ${link}
-                        </a>
+                      ${meta.isEnabled ? `
+                        <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+                          <span style="font-size:1.1rem;">${meta.icon}</span>
+                          <a href="${normalizedLink}" target="_blank" rel="noopener noreferrer" style="font-size:0.825rem; color:var(--accent-blue); text-decoration:none; font-family:monospace; word-break:break-all; font-weight:600;">
+                            ${link}
+                          </a>
+                        </div>
                       ` : `
                         <span style="font-size:0.825rem; color:var(--text-muted); font-style:italic;">No lesson link provided yet</span>
                       `}
@@ -5194,12 +5200,21 @@ class AttendanceApp {
                   </td>
                   <td style="text-align:center;">
                     <div style="display:inline-flex; gap:0.4rem; justify-content:center; align-items:center;">
-                      <button type="button" class="btn-canva ${!hasLink ? 'disabled' : ''}"
-                        onclick="app.openCanvaLesson('${link}')" title="${hasLink ? 'Open Lesson in new tab' : 'Please enter a URL first'}">
-                        ${launchBtnText}
+                      <button type="button" 
+                        id="course_launch_${currentLevel.id}_${s.session}"
+                        class="${meta.btnClass}"
+                        onclick="app.openCourseLesson('${currentLevel.id}', ${s.session})" 
+                        title="${meta.isEnabled ? 'Open ' + meta.label + ' in new tab' : 'Please enter a URL first'}"
+                        ${!meta.isEnabled ? 'disabled' : ''}>
+                        <span id="course_btn_label_${currentLevel.id}_${s.session}">${meta.icon} ${meta.label}</span>
                       </button>
-                      <button type="button" class="btn btn-secondary" style="padding:0.4rem 0.6rem; font-size:0.775rem;"
-                        onclick="app.copySessionLink('${link}')" title="Copy lesson link" ${!hasLink ? 'disabled' : ''}>
+                      <button type="button" 
+                        id="course_copy_${currentLevel.id}_${s.session}"
+                        class="btn btn-secondary ${!meta.isEnabled ? 'disabled' : ''}" 
+                        style="padding:0.45rem 0.65rem; font-size:0.8rem;"
+                        onclick="app.copySessionLink('${currentLevel.id}', ${s.session})" 
+                        title="Copy lesson link" 
+                        ${!meta.isEnabled ? 'disabled' : ''}>
                         📋
                       </button>
                     </div>
@@ -5215,7 +5230,7 @@ class AttendanceApp {
       ${this.isAdmin ? `
         <div style="display:flex; justify-content:space-between; align-items:center; margin-top:1.5rem; padding:1rem 1.25rem; background:#f8fafc; border:1px solid var(--border-color); border-radius:10px; flex-wrap:wrap; gap:0.75rem;">
           <div style="font-size:0.8rem; color:var(--text-secondary);">
-            💡 <b>Tip:</b> Changes to lesson titles and Canva links save automatically as you type, or click <b>Save All Changes</b> to sync across devices.
+            💡 <b>Tip:</b> Changes to lesson titles, PDF, and Canva links save automatically as you type or paste, or click <b>Save All Changes</b> to sync.
           </div>
           <button type="button" class="btn btn-primary" style="font-size:0.825rem; padding:0.45rem 1rem;" onclick="app.handleSaveAllCourseSessions('${currentLevel.id}')">
             💾 Save All Changes for ${currentLevel.name}
@@ -5223,6 +5238,143 @@ class AttendanceApp {
         </div>
       ` : ''}
     `;
+  }
+
+  // URL Normalizer - auto-prepends https:// if missing
+  normalizeLessonUrl(url) {
+    if (!url) return '';
+    let clean = String(url).trim();
+    if (!clean) return '';
+    if (!/^https?:\/\//i.test(clean) && !clean.startsWith('blob:') && !clean.startsWith('data:')) {
+      clean = 'https://' + clean;
+    }
+    return clean;
+  }
+
+  // Real-time link classifier: Canva, PDF, Video, Slides, Drive, or generic web URL
+  getLessonLinkMeta(url) {
+    const raw = (url || '').trim();
+    if (!raw) {
+      return {
+        type: 'none',
+        label: 'Open Lesson',
+        icon: '🔗',
+        btnClass: 'btn-canva disabled',
+        isEnabled: false
+      };
+    }
+    const lower = raw.toLowerCase();
+
+    // PDF link detection: .pdf, /pdf, Google Drive /file/d/..., Google Docs PDF, etc.
+    const isPdf = lower.includes('.pdf') || 
+                  lower.includes('/pdf') || 
+                  (lower.includes('drive.google.com') && (lower.includes('file/d/') || lower.includes('view') || lower.includes('open')));
+
+    // Canva detection: canva.com, canva.link, etc.
+    const isCanva = lower.includes('canva.com') || lower.includes('canva.link');
+
+    // Video detection: youtube, youtu.be, vimeo
+    const isVideo = lower.includes('youtube.com') || lower.includes('youtu.be') || lower.includes('vimeo.com');
+
+    // Google Slides / Presentations
+    const isSlides = lower.includes('docs.google.com/presentation');
+
+    // Google Drive (general drive link)
+    const isDrive = !isPdf && lower.includes('drive.google.com');
+
+    if (isPdf) {
+      return {
+        type: 'pdf',
+        label: 'Open PDF',
+        icon: '📄',
+        btnClass: 'btn-canva btn-pdf',
+        isEnabled: true
+      };
+    }
+    if (isCanva) {
+      return {
+        type: 'canva',
+        label: 'Open Canva',
+        icon: '🎨',
+        btnClass: 'btn-canva',
+        isEnabled: true
+      };
+    }
+    if (isVideo) {
+      return {
+        type: 'video',
+        label: 'Open Video',
+        icon: '🎬',
+        btnClass: 'btn-canva btn-video',
+        isEnabled: true
+      };
+    }
+    if (isSlides) {
+      return {
+        type: 'slides',
+        label: 'Open Slides',
+        icon: '📊',
+        btnClass: 'btn-canva btn-slides',
+        isEnabled: true
+      };
+    }
+    if (isDrive) {
+      return {
+        type: 'drive',
+        label: 'Open Drive',
+        icon: '📁',
+        btnClass: 'btn-canva btn-drive',
+        isEnabled: true
+      };
+    }
+    return {
+      type: 'generic',
+      label: 'Open Lesson',
+      icon: '🔗',
+      btnClass: 'btn-canva btn-lesson',
+      isEnabled: true
+    };
+  }
+
+  // Real-time keystroke and paste listener for instant UI activation
+  handleCourseLinkInput(levelId, sessionNum, rawValue) {
+    const meta = this.getLessonLinkMeta(rawValue);
+    const launchBtn = document.getElementById(`course_launch_${levelId}_${sessionNum}`);
+    const copyBtn = document.getElementById(`course_copy_${levelId}_${sessionNum}`);
+    const iconSpan = document.getElementById(`course_icon_${levelId}_${sessionNum}`);
+    const labelSpan = document.getElementById(`course_btn_label_${levelId}_${sessionNum}`);
+
+    if (iconSpan) {
+      iconSpan.textContent = meta.icon;
+      iconSpan.title = meta.label;
+    }
+
+    if (launchBtn) {
+      launchBtn.className = meta.btnClass;
+      launchBtn.title = meta.isEnabled ? `Open ${meta.label} in new tab` : 'Please enter a URL first';
+      if (!meta.isEnabled) {
+        launchBtn.setAttribute('disabled', 'true');
+      } else {
+        launchBtn.removeAttribute('disabled');
+      }
+    }
+
+    if (labelSpan) {
+      labelSpan.textContent = `${meta.icon} ${meta.label}`;
+    }
+
+    if (copyBtn) {
+      if (meta.isEnabled) {
+        copyBtn.classList.remove('disabled');
+        copyBtn.removeAttribute('disabled');
+      } else {
+        copyBtn.classList.add('disabled');
+        copyBtn.setAttribute('disabled', 'true');
+      }
+    }
+
+    // Auto-save to storage in background
+    this.updateCourseSessionField(levelId, sessionNum, 'link', rawValue);
   }
 
   selectCourseLevel(levelId) {
@@ -5279,28 +5431,86 @@ class AttendanceApp {
     if (window.firebaseClient) {
       window.firebaseClient.logAdminActivity(
         'COURSE_CURRICULUM_SAVED',
-        `Saved course curriculum and Canva links for ${lvl.name}.`
+        `Saved course curriculum and links for ${lvl.name}.`
       );
     }
 
     this.renderCourseTab(targetLevelId);
   }
 
-  openCanvaLesson(linkUrl) {
-    const cleanUrl = (linkUrl || '').trim();
-    if (!cleanUrl || !cleanUrl.startsWith('http')) {
-      this.showToast('No Link Configured', 'Please provide a valid Canva or lesson web link starting with https://', 'warning');
+  openCourseLesson(levelId, sessionNum) {
+    let rawUrl = '';
+    const input = document.getElementById(`course_link_${levelId}_${sessionNum}`);
+    if (input) {
+      rawUrl = input.value;
+    }
+
+    // Fallback to storage if element not found
+    if (!rawUrl && window.storageManager) {
+      const coursesData = window.storageManager.getCourses();
+      const lvl = coursesData.levels?.find(l => l.id === levelId);
+      const sess = lvl?.sessions?.find(s => s.session === sessionNum);
+      if (sess) rawUrl = sess.link;
+    }
+
+    const cleanUrl = this.normalizeLessonUrl(rawUrl);
+    if (!cleanUrl) {
+      this.showToast('No Link Configured', 'Please paste or enter a lesson link (Canva, PDF, Drive, or website).', 'warning');
+      if (input) input.focus();
+      return;
+    }
+
+    const meta = this.getLessonLinkMeta(cleanUrl);
+
+    try {
+      const win = window.open(cleanUrl, '_blank', 'noopener,noreferrer');
+      if (!win) {
+        this.showToast('Opening Link', `Opening ${meta.label}... (If blocked, please allow popups)`, 'info');
+        window.location.href = cleanUrl;
+      } else {
+        this.showToast('Opening Lesson', `Launched ${meta.label} in new tab.`, 'success');
+      }
+    } catch (err) {
+      window.location.href = cleanUrl;
+    }
+  }
+
+  // Backwards compatibility alias
+  openCanvaLesson(linkUrl, levelId = null, sessionNum = null) {
+    if (levelId && sessionNum) {
+      return this.openCourseLesson(levelId, sessionNum);
+    }
+    const cleanUrl = this.normalizeLessonUrl(linkUrl);
+    if (!cleanUrl) {
+      this.showToast('No Link Configured', 'Please provide a valid Canva, PDF, or lesson web link.', 'warning');
       return;
     }
     window.open(cleanUrl, '_blank', 'noopener,noreferrer');
   }
 
-  copySessionLink(linkUrl) {
-    const cleanUrl = (linkUrl || '').trim();
+  copySessionLink(arg1, arg2 = null) {
+    let rawUrl = '';
+    if (arg2 !== null) {
+      // Called with (levelId, sessionNum)
+      const input = document.getElementById(`course_link_${arg1}_${arg2}`);
+      if (input) {
+        rawUrl = input.value;
+      } else if (window.storageManager) {
+        const coursesData = window.storageManager.getCourses();
+        const lvl = coursesData.levels?.find(l => l.id === arg1);
+        const sess = lvl?.sessions?.find(s => s.session === arg2);
+        if (sess) rawUrl = sess.link;
+      }
+    } else {
+      rawUrl = arg1;
+    }
+
+    const cleanUrl = this.normalizeLessonUrl(rawUrl);
     if (!cleanUrl) {
       this.showToast('Empty Link', 'No lesson link available to copy.', 'info');
       return;
     }
+
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(cleanUrl).then(() => {
         this.showToast('Link Copied!', 'Lesson URL copied to clipboard.', 'success');

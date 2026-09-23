@@ -2472,7 +2472,7 @@ body.theme-purple {
   border: none;
   cursor: pointer;
   text-decoration: none;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 2px 8px rgba(125, 42, 232, 0.25);
   white-space: nowrap;
 }
@@ -2483,13 +2483,58 @@ body.theme-purple {
   opacity: 0.95;
 }
 
+/* PDF Lesson Button - Sleek Crimson Red Gradient */
+.btn-canva.btn-pdf {
+  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.28);
+}
+.btn-canva.btn-pdf:hover {
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.42);
+}
+
+/* Video Lesson Button - Warm Amber/Orange Gradient */
+.btn-canva.btn-video {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  box-shadow: 0 2px 8px rgba(217, 119, 6, 0.28);
+}
+.btn-canva.btn-video:hover {
+  box-shadow: 0 4px 12px rgba(217, 119, 6, 0.4);
+}
+
+/* Google Slides / Presentations Button - Vibrant Coral Gradient */
+.btn-canva.btn-slides {
+  background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%);
+  box-shadow: 0 2px 8px rgba(234, 88, 12, 0.28);
+}
+.btn-canva.btn-slides:hover {
+  box-shadow: 0 4px 12px rgba(234, 88, 12, 0.4);
+}
+
+/* Google Drive Button - Emerald Green Gradient */
+.btn-canva.btn-drive {
+  background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.28);
+}
+.btn-canva.btn-drive:hover {
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+/* Generic Web Lesson Button - Royal Blue Gradient */
+.btn-canva.btn-lesson {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.28);
+}
+.btn-canva.btn-lesson:hover {
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+}
+
 .btn-canva.disabled,
 .btn-canva[disabled] {
-  background: #e2e8f0;
+  background: #e2e8f0 !important;
   color: #94a3b8 !important;
-  box-shadow: none;
+  box-shadow: none !important;
   cursor: not-allowed;
-  pointer-events: none;
+  pointer-events: auto; /* Allow click so click handler can provide guidance toast */
 }
 
 .session-number-badge {
