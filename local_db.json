@@ -351,5 +351,157 @@
   "settings": {
     "soundEnabled": true,
     "theme": "default"
+  },
+  "courses": {
+    "levels": [
+      {
+        "id": "level-1",
+        "levelNumber": 1,
+        "name": "Level 1: Foundations of Robotics & Coding",
+        "description": "Introductory mechanics, electronics, block programming, and sensor basics.",
+        "sessions": [
+          {
+            "session": 1,
+            "title": "Welcome & Introduction to Robotics",
+            "link": "https://www.canva.com",
+            "notes": ""
+          },
+          {
+            "session": 2,
+            "title": "Electronic Components & Circuits",
+            "link": "",
+            "notes": ""
+          },
+          {
+            "session": 3,
+            "title": "Sensors & Input Signals",
+            "link": "",
+            "notes": ""
+          },
+          {
+            "session": 4,
+            "title": "Motors & Actuators Mechanism",
+            "link": "",
+            "notes": ""
+          },
+          {
+            "session": 5,
+            "title": "Block-Based Programming Basics",
+            "link": "",
+            "notes": ""
+          },
+          {
+            "session": 6,
+            "title": "Logic Control & Conditionals",
+            "link": "",
+            "notes": ""
+          },
+          {
+            "session": 7,
+            "title": "Loops & Repeat Automation",
+            "link": "",
+            "notes": ""
+          },
+          {
+            "session": 8,
+            "title": "Robotics Obstacle Detection",
+            "link": "",
+            "notes": ""
+          },
+          {
+            "session": 9,
+            "title": "Line Tracking Bot Assembly",
+            "link": "",
+            "notes": ""
+          },
+          {
+            "session": 10,
+            "title": "Troubleshooting & Code Optimization",
+            "link": "",
+            "notes": ""
+          },
+          {
+            "session": 11,
+            "title": "Final Project Showcase & Certificate",
+            "link": "",
+            "notes": ""
+          }
+        ]
+      },
+      {
+        "id": "level-2",
+        "levelNumber": 2,
+        "name": "Level 2: Microcontrollers & Sensor Systems",
+        "description": "Arduino microcontrollers, sensor integration, and C++ algorithm development.",
+        "sessions": [
+          {
+            "session": 1,
+            "title": "Microcontroller Architecture & Arduino Setup",
+            "link": "",
+            "notes": ""
+          },
+          {
+            "session": 2,
+            "title": "Digital & Analog Pin Operations",
+            "link": "",
+            "notes": ""
+          },
+          {
+            "session": 3,
+            "title": "Ultrasonic & Infrared Sensor Integration",
+            "link": "",
+            "notes": ""
+          },
+          {
+            "session": 4,
+            "title": "PWM Motor Driver & Speed Control",
+            "link": "",
+            "notes": ""
+          },
+          {
+            "session": 5,
+            "title": "Serial Monitor & Debugging Techniques",
+            "link": "",
+            "notes": ""
+          },
+          {
+            "session": 6,
+            "title": "State Machines & Complex Decision Trees",
+            "link": "",
+            "notes": ""
+          },
+          {
+            "session": 7,
+            "title": "Bluetooth & Wireless Robotics Control",
+            "link": "",
+            "notes": ""
+          },
+          {
+            "session": 8,
+            "title": "Multi-Sensor Data Fusion",
+            "link": "",
+            "notes": ""
+          },
+          {
+            "session": 9,
+            "title": "Autonomous Navigation Algorithms",
+            "link": "",
+            "notes": ""
+          },
+          {
+            "session": 10,
+            "title": "System Integration & Stress Testing",
+            "link": "",
+            "notes": ""
+          },
+          {
+            "session": 11,
+            "title": "Autonomous Robot Competition & Demo",
+            "link": "",
+            "notes": ""
+          }
+        ]
+      }
+    ]
   }
 }

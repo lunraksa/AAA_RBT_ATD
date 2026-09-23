@@ -796,6 +796,7 @@ class AttendanceApp {
     if (tabId === 'analytics') this.renderAnalyticsDashboard();
     if (tabId === 'termcontrol') this.renderTermControlTab();
     if (tabId === 'examcontrol') this.renderExamControlTab();
+    if (tabId === 'course') this.renderCourseTab();
   }
 
   // Render 11-Week Saturday & Sunday Matrix Table
@@ -5042,6 +5043,383 @@ class AttendanceApp {
     }
     this.showToast('Exam Deleted', 'Examination record removed successfully.', 'info');
     this.renderExamControlTab();
+  }
+
+  // ==========================================================================
+  // COURSE CURRICULUM & 11-SESSION LESSON MANAGEMENT
+  // ==========================================================================
+  renderCourseTab(activeLevelId = null) {
+    const container = document.getElementById('courseControlContainer');
+    if (!container || !window.storageManager) return;
+
+    const addBtn = document.getElementById('addCourseLevelBtn');
+    const saveBtn = document.getElementById('saveCourseSessionsBtn');
+    if (addBtn) addBtn.style.display = this.isAdmin ? 'inline-flex' : 'none';
+    if (saveBtn) saveBtn.style.display = this.isAdmin ? 'inline-flex' : 'none';
+
+    const coursesData = window.storageManager.getCourses();
+    const levels = coursesData.levels || [];
+
+    if (levels.length === 0) {
+      container.innerHTML = `
+        <div style="text-align:center; padding:3rem 1.5rem; color:var(--text-muted);">
+          <div style="font-size:2.5rem; margin-bottom:0.75rem;">📚</div>
+          <h4 style="font-weight:700; color:var(--text-primary); margin-bottom:0.5rem;">No Course Levels Found</h4>
+          <p style="font-size:0.85rem; max-width:420px; margin:0 auto 1.25rem auto;">
+            Get started by creating your first course level with 11 structured sessions and lesson links.
+          </p>
+          ${this.isAdmin ? `
+            <button class="btn btn-primary" onclick="app.openAddCourseLevelModal()">
+              + Add First Level
+            </button>
+          ` : ''}
+        </div>
+      `;
+      return;
+    }
+
+    if (activeLevelId) {
+      this.activeCourseLevelId = activeLevelId;
+    }
+
+    let currentLevel = levels.find(l => l.id === this.activeCourseLevelId);
+    if (!currentLevel) {
+      currentLevel = levels[0];
+      this.activeCourseLevelId = currentLevel.id;
+    }
+
+    // Ensure 11 sessions exist for this level
+    const sessions = currentLevel.sessions || [];
+
+    container.innerHTML = `
+      <!-- Level Navigation Pills -->
+      <div class="course-levels-bar">
+        ${levels.map((lvl) => {
+          const isActive = lvl.id === currentLevel.id;
+          return `
+            <button type="button" class="course-level-pill ${isActive ? 'active' : ''}" onclick="app.selectCourseLevel('${lvl.id}')">
+              <span>${lvl.name}</span>
+              <span class="pill-badge">11 Sessions</span>
+            </button>
+          `;
+        }).join('')}
+        ${this.isAdmin ? `
+          <button type="button" class="btn btn-secondary" style="font-size:0.8rem; padding:0.45rem 0.85rem; border-radius:12px; margin-left:auto; white-space:nowrap;" onclick="app.openAddCourseLevelModal()">
+            + Add Level
+          </button>
+        ` : ''}
+      </div>
+
+      <!-- Active Level Header & Syllabus Banner -->
+      <div class="course-banner-card">
+        <div>
+          <div style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap;">
+            <span class="session-number-badge" style="background:#e0e7ff; color:#4338ca; border-color:#c7d2fe;">
+              LEVEL ${currentLevel.levelNumber || 1}
+            </span>
+            <h3 class="course-banner-title">${currentLevel.name}</h3>
+          </div>
+          <p class="course-banner-desc">${currentLevel.description || 'Specialized curriculum sessions, interactive slide decks, and lesson resources.'}</p>
+        </div>
+
+        <div style="display:flex; gap:0.5rem; align-items:center;">
+          ${this.isAdmin ? `
+            <button type="button" class="btn btn-secondary" style="font-size:0.8rem; padding:0.45rem 0.8rem;" onclick="app.openEditCourseLevelModal('${currentLevel.id}')" title="Rename or modify level details">
+              ✏️ Edit Level Details
+            </button>
+            ${levels.length > 1 ? `
+              <button type="button" class="btn btn-danger" style="font-size:0.8rem; padding:0.45rem 0.8rem;" onclick="app.handleDeleteCourseLevel('${currentLevel.id}')" title="Delete this level">
+                🗑️ Delete Level
+              </button>
+            ` : ''}
+          ` : ''}
+        </div>
+      </div>
+
+      <!-- 11 Sessions Curriculum Table -->
+      <div class="table-responsive">
+        <table class="custom-table" style="font-size:0.85rem;">
+          <thead>
+            <tr>
+              <th style="width:110px;">Session</th>
+              <th style="min-width:240px;">Lesson Topic / Title</th>
+              <th style="min-width:320px;">Lesson Link (Canva, Slides, Video, LMS)</th>
+              <th style="width:200px; text-align:center;">Launch & Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${sessions.map((s) => {
+              const link = (s.link || '').trim();
+              const hasLink = Boolean(link && link.startsWith('http'));
+              const isCanva = link.toLowerCase().includes('canva');
+              const launchBtnText = isCanva ? '🎨 Open Canva' : '🔗 Open Lesson';
+
+              return `
+                <tr>
+                  <td>
+                    <span class="session-number-badge">
+                      Session ${s.session}
+                    </span>
+                  </td>
+                  <td>
+                    ${this.isAdmin ? `
+                      <input type="text" id="course_title_${currentLevel.id}_${s.session}" class="form-input"
+                        value="${s.title || ''}" placeholder="e.g. Session ${s.session} Topic"
+                        style="padding:0.4rem 0.65rem; font-size:0.85rem; font-weight:600; width:100%; box-sizing:border-box;"
+                        onchange="app.updateCourseSessionField('${currentLevel.id}', ${s.session}, 'title', this.value)" />
+                    ` : `
+                      <div style="font-weight:700; color:var(--text-primary); font-size:0.875rem;">
+                        ${s.title || `Session ${s.session} Lesson`}
+                      </div>
+                    `}
+                  </td>
+                  <td>
+                    ${this.isAdmin ? `
+                      <div style="display:flex; align-items:center; gap:0.4rem;">
+                        <span style="font-size:0.9rem;" title="Canva or Lesson URL">🎨</span>
+                        <input type="url" id="course_link_${currentLevel.id}_${s.session}" class="form-input"
+                          value="${link}" placeholder="Paste Canva or lesson link (https://...)"
+                          style="padding:0.4rem 0.65rem; font-size:0.825rem; font-family:monospace; width:100%; box-sizing:border-box;"
+                          onchange="app.updateCourseSessionField('${currentLevel.id}', ${s.session}, 'link', this.value)" />
+                      </div>
+                    ` : `
+                      ${hasLink ? `
+                        <a href="${link}" target="_blank" rel="noopener noreferrer" style="font-size:0.825rem; color:var(--accent-blue); text-decoration:none; font-family:monospace; word-break:break-all;">
+                          ${link}
+                        </a>
+                      ` : `
+                        <span style="font-size:0.825rem; color:var(--text-muted); font-style:italic;">No lesson link provided yet</span>
+                      `}
+                    `}
+                  </td>
+                  <td style="text-align:center;">
+                    <div style="display:inline-flex; gap:0.4rem; justify-content:center; align-items:center;">
+                      <button type="button" class="btn-canva ${!hasLink ? 'disabled' : ''}"
+                        onclick="app.openCanvaLesson('${link}')" title="${hasLink ? 'Open Lesson in new tab' : 'Please enter a URL first'}">
+                        ${launchBtnText}
+                      </button>
+                      <button type="button" class="btn btn-secondary" style="padding:0.4rem 0.6rem; font-size:0.775rem;"
+                        onclick="app.copySessionLink('${link}')" title="Copy lesson link" ${!hasLink ? 'disabled' : ''}>
+                        📋
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Save Floating Bar for Admin -->
+      ${this.isAdmin ? `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:1.5rem; padding:1rem 1.25rem; background:#f8fafc; border:1px solid var(--border-color); border-radius:10px; flex-wrap:wrap; gap:0.75rem;">
+          <div style="font-size:0.8rem; color:var(--text-secondary);">
+            💡 <b>Tip:</b> Changes to lesson titles and Canva links save automatically as you type, or click <b>Save All Changes</b> to sync across devices.
+          </div>
+          <button type="button" class="btn btn-primary" style="font-size:0.825rem; padding:0.45rem 1rem;" onclick="app.handleSaveAllCourseSessions('${currentLevel.id}')">
+            💾 Save All Changes for ${currentLevel.name}
+          </button>
+        </div>
+      ` : ''}
+    `;
+  }
+
+  selectCourseLevel(levelId) {
+    this.activeCourseLevelId = levelId;
+    this.renderCourseTab(levelId);
+  }
+
+  updateCourseSessionField(levelId, sessionNum, field, value) {
+    if (!window.storageManager) return;
+    const coursesData = window.storageManager.getCourses();
+    const lvl = coursesData.levels.find(l => l.id === levelId);
+    if (!lvl) return;
+
+    if (!lvl.sessions) lvl.sessions = [];
+    let sess = lvl.sessions.find(s => s.session === sessionNum);
+    if (!sess) {
+      sess = { session: sessionNum, title: `Session ${sessionNum} Lesson`, link: '', notes: '' };
+      lvl.sessions.push(sess);
+    }
+
+    sess[field] = (value || '').trim();
+    window.storageManager.saveCourses(coursesData);
+  }
+
+  handleSaveAllCourseSessions(levelId = null) {
+    if (!this.checkAdminPermission('save course curriculum')) return;
+    if (!window.storageManager) return;
+
+    const targetLevelId = levelId || this.activeCourseLevelId;
+    const coursesData = window.storageManager.getCourses();
+    const lvl = coursesData.levels.find(l => l.id === targetLevelId);
+    if (!lvl) return;
+
+    // Read all 11 session inputs from DOM
+    for (let i = 1; i <= 11; i++) {
+      const titleInput = document.getElementById(`course_title_${targetLevelId}_${i}`);
+      const linkInput = document.getElementById(`course_link_${targetLevelId}_${i}`);
+
+      let sess = lvl.sessions.find(s => s.session === i);
+      if (!sess) {
+        sess = { session: i, title: `Session ${i} Lesson`, link: '', notes: '' };
+        lvl.sessions.push(sess);
+      }
+
+      if (titleInput) sess.title = titleInput.value.trim();
+      if (linkInput) sess.link = linkInput.value.trim();
+    }
+
+    window.storageManager.saveCourses(coursesData);
+
+    try { this.playSound('success'); } catch (err) {}
+    this.showToast('Curriculum Saved!', `${lvl.name} (11 Sessions) saved successfully.`, 'success');
+
+    if (window.firebaseClient) {
+      window.firebaseClient.logAdminActivity(
+        'COURSE_CURRICULUM_SAVED',
+        `Saved course curriculum and Canva links for ${lvl.name}.`
+      );
+    }
+
+    this.renderCourseTab(targetLevelId);
+  }
+
+  openCanvaLesson(linkUrl) {
+    const cleanUrl = (linkUrl || '').trim();
+    if (!cleanUrl || !cleanUrl.startsWith('http')) {
+      this.showToast('No Link Configured', 'Please provide a valid Canva or lesson web link starting with https://', 'warning');
+      return;
+    }
+    window.open(cleanUrl, '_blank', 'noopener,noreferrer');
+  }
+
+  copySessionLink(linkUrl) {
+    const cleanUrl = (linkUrl || '').trim();
+    if (!cleanUrl) {
+      this.showToast('Empty Link', 'No lesson link available to copy.', 'info');
+      return;
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(cleanUrl).then(() => {
+        this.showToast('Link Copied!', 'Lesson URL copied to clipboard.', 'success');
+      }).catch(() => {
+        this.showToast('Link Ready', cleanUrl, 'info');
+      });
+    } else {
+      this.showToast('Link Ready', cleanUrl, 'info');
+    }
+  }
+
+  openAddCourseLevelModal() {
+    if (!this.checkAdminPermission('add course levels')) return;
+    const modal = document.getElementById('courseLevelModal');
+    const form = document.getElementById('courseLevelForm');
+    const title = document.getElementById('courseLevelModalTitle');
+    const idInput = document.getElementById('editingCourseLevelId');
+    const nameInput = document.getElementById('courseLevelNameInput');
+    const descInput = document.getElementById('courseLevelDescInput');
+    const delBtn = document.getElementById('deleteCourseLevelBtn');
+
+    if (form) form.reset();
+    if (idInput) idInput.value = '';
+    if (title) title.textContent = 'Add New Course Level';
+    if (delBtn) delBtn.style.display = 'none';
+
+    const coursesData = window.storageManager.getCourses();
+    const nextNum = (coursesData.levels || []).length + 1;
+    if (nameInput) nameInput.value = `Level ${nextNum}: `;
+
+    if (modal) modal.classList.add('active');
+  }
+
+  openEditCourseLevelModal(levelId) {
+    if (!this.checkAdminPermission('edit course levels')) return;
+    const modal = document.getElementById('courseLevelModal');
+    const title = document.getElementById('courseLevelModalTitle');
+    const idInput = document.getElementById('editingCourseLevelId');
+    const nameInput = document.getElementById('courseLevelNameInput');
+    const descInput = document.getElementById('courseLevelDescInput');
+    const delBtn = document.getElementById('deleteCourseLevelBtn');
+
+    const coursesData = window.storageManager.getCourses();
+    const lvl = coursesData.levels.find(l => l.id === levelId);
+    if (!lvl) return;
+
+    if (idInput) idInput.value = lvl.id;
+    if (nameInput) nameInput.value = lvl.name || '';
+    if (descInput) descInput.value = lvl.description || '';
+    if (title) title.textContent = `Edit Course Level (${lvl.name})`;
+    if (delBtn) delBtn.style.display = coursesData.levels.length > 1 ? 'inline-flex' : 'none';
+
+    if (modal) modal.classList.add('active');
+  }
+
+  closeCourseLevelModal() {
+    const modal = document.getElementById('courseLevelModal');
+    if (modal) modal.classList.remove('active');
+  }
+
+  handleSaveCourseLevel(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!this.checkAdminPermission('save course level')) return;
+
+    const idInput = document.getElementById('editingCourseLevelId');
+    const nameInput = document.getElementById('courseLevelNameInput');
+    const descInput = document.getElementById('courseLevelDescInput');
+
+    const name = nameInput ? nameInput.value.trim() : '';
+    const desc = descInput ? descInput.value.trim() : '';
+    const editingId = idInput ? idInput.value.trim() : '';
+
+    if (!name) {
+      this.showToast('Level Name Required', 'Please enter a title for this course level.', 'warning');
+      return;
+    }
+
+    if (editingId) {
+      window.storageManager.updateCourseLevel(editingId, { name, description: desc });
+      this.showToast('Level Updated', `${name} updated successfully.`, 'success');
+      this.activeCourseLevelId = editingId;
+    } else {
+      const res = window.storageManager.addCourseLevel({ name, description: desc });
+      this.showToast('Level Created', `${name} with 11 sessions created.`, 'success');
+      if (res && res.level) this.activeCourseLevelId = res.level.id;
+    }
+
+    this.closeCourseLevelModal();
+    this.renderCourseTab();
+  }
+
+  handleDeleteCurrentCourseLevel() {
+    const idInput = document.getElementById('editingCourseLevelId');
+    const levelId = idInput ? idInput.value.trim() : '';
+    if (!levelId) return;
+
+    this.handleDeleteCourseLevel(levelId);
+    this.closeCourseLevelModal();
+  }
+
+  handleDeleteCourseLevel(levelId) {
+    if (!this.checkAdminPermission('delete course levels')) return;
+    const coursesData = window.storageManager.getCourses();
+    const lvl = coursesData.levels.find(l => l.id === levelId);
+    const lvlName = lvl ? lvl.name : levelId;
+
+    if (!confirm(`Are you sure you want to delete ${lvlName} and all its 11 session lesson links?`)) {
+      return;
+    }
+
+    const res = window.storageManager.deleteCourseLevel(levelId);
+    if (res && res.success) {
+      this.showToast('Level Deleted', `${lvlName} removed from courses.`, 'info');
+      const updated = window.storageManager.getCourses();
+      this.activeCourseLevelId = updated.levels[0]?.id || null;
+      this.renderCourseTab();
+    } else {
+      this.showToast('Cannot Delete', res.reason || 'Failed to delete level.', 'warning');
+    }
   }
 }
 

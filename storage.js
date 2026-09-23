@@ -14,7 +14,8 @@ const STORAGE_KEYS = {
   GRADES: 'face_attendance_grades',
   ADMINS: 'face_attendance_admins',
   ADMIN_LOGS: 'face_attendance_admin_logs',
-  BRANCHES: 'face_attendance_branches'
+  BRANCHES: 'face_attendance_branches',
+  COURSES: 'face_attendance_courses'
 };
 
 // Default Pre-Configured Branches Directory
@@ -1733,6 +1734,135 @@ class StorageManager {
       return { success: true, exam };
     }
     return { success: false, reason: 'Exam not found.' };
+  }
+
+  // Course Curriculum & 11-Session Lesson Management
+  getCourses() {
+    const defaultCourses = {
+      levels: [
+        {
+          id: 'level-1',
+          levelNumber: 1,
+          name: 'Level 1: Foundations of Robotics & Coding',
+          description: 'Introductory mechanics, electronics, block programming, and sensor basics.',
+          sessions: [
+            { session: 1, title: 'Welcome & Introduction to Robotics', link: 'https://www.canva.com', notes: 'Introductory presentation slides' },
+            { session: 2, title: 'Electronic Components & Circuits', link: '', notes: '' },
+            { session: 3, title: 'Sensors & Input Signals', link: '', notes: '' },
+            { session: 4, title: 'Motors & Actuators Mechanism', link: '', notes: '' },
+            { session: 5, title: 'Block-Based Programming Basics', link: '', notes: '' },
+            { session: 6, title: 'Logic Control & Conditionals', link: '', notes: '' },
+            { session: 7, title: 'Loops & Repeat Automation', link: '', notes: '' },
+            { session: 8, title: 'Robotics Obstacle Detection', link: '', notes: '' },
+            { session: 9, title: 'Line Tracking Bot Assembly', link: '', notes: '' },
+            { session: 10, title: 'Troubleshooting & Code Optimization', link: '', notes: '' },
+            { session: 11, title: 'Final Project Showcase & Certificate', link: '', notes: '' }
+          ]
+        },
+        {
+          id: 'level-2',
+          levelNumber: 2,
+          name: 'Level 2: Microcontrollers & Sensor Systems',
+          description: 'Arduino microcontrollers, sensor integration, and C++ algorithm development.',
+          sessions: [
+            { session: 1, title: 'Microcontroller Architecture & Arduino Setup', link: '', notes: '' },
+            { session: 2, title: 'Digital & Analog Pin Operations', link: '', notes: '' },
+            { session: 3, title: 'Ultrasonic & Infrared Sensor Integration', link: '', notes: '' },
+            { session: 4, title: 'PWM Motor Driver & Speed Control', link: '', notes: '' },
+            { session: 5, title: 'Serial Monitor & Debugging Techniques', link: '', notes: '' },
+            { session: 6, title: 'State Machines & Complex Decision Trees', link: '', notes: '' },
+            { session: 7, title: 'Bluetooth & Wireless Robotics Control', link: '', notes: '' },
+            { session: 8, title: 'Multi-Sensor Data Fusion', link: '', notes: '' },
+            { session: 9, title: 'Autonomous Navigation Algorithms', link: '', notes: '' },
+            { session: 10, title: 'System Integration & Stress Testing', link: '', notes: '' },
+            { session: 11, title: 'Autonomous Robot Competition & Demo', link: '', notes: '' }
+          ]
+        }
+      ]
+    };
+
+    try {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEYS.COURSES));
+      if (stored && stored.levels && Array.isArray(stored.levels) && stored.levels.length > 0) {
+        // Guarantee each level has exactly 11 sessions
+        stored.levels.forEach(lvl => {
+          if (!lvl.sessions || !Array.isArray(lvl.sessions) || lvl.sessions.length < 11) {
+            const existing = lvl.sessions || [];
+            const completeSessions = [];
+            for (let i = 1; i <= 11; i++) {
+              const found = existing.find(s => s.session === i);
+              completeSessions.push(found || { session: i, title: `Session ${i} Lesson`, link: '', notes: '' });
+            }
+            lvl.sessions = completeSessions;
+          }
+        });
+        return stored;
+      }
+      return defaultCourses;
+    } catch (e) {
+      return defaultCourses;
+    }
+  }
+
+  saveCourses(coursesData) {
+    if (!coursesData || !coursesData.levels) return;
+    localStorage.setItem(STORAGE_KEYS.COURSES, JSON.stringify(coursesData));
+    if (window.firebaseClient && window.firebaseClient.db) {
+      try {
+        window.firebaseClient.db.ref('courses').set(coursesData);
+      } catch (e) { }
+    }
+    return coursesData;
+  }
+
+  updateCourseLevel(levelId, updatedData) {
+    const data = this.getCourses();
+    const lvlIdx = data.levels.findIndex(l => l.id === levelId);
+    if (lvlIdx >= 0) {
+      data.levels[lvlIdx] = { ...data.levels[lvlIdx], ...updatedData };
+      this.saveCourses(data);
+      return { success: true, level: data.levels[lvlIdx] };
+    }
+    return { success: false, reason: 'Level not found' };
+  }
+
+  addCourseLevel(levelData) {
+    const data = this.getCourses();
+    const nextNum = data.levels.length + 1;
+    const newId = levelData.id || `level-${nextNum}`;
+    
+    // Automatically generate 11 sessions for the new level
+    const sessions = [];
+    for (let i = 1; i <= 11; i++) {
+      sessions.push({
+        session: i,
+        title: `Session ${i} Lesson`,
+        link: '',
+        notes: ''
+      });
+    }
+
+    const newLevel = {
+      id: newId,
+      levelNumber: nextNum,
+      name: levelData.name || `Level ${nextNum}: Advanced Robotics & AI`,
+      description: levelData.description || 'Specialized curriculum and hands-on projects.',
+      sessions: sessions
+    };
+
+    data.levels.push(newLevel);
+    this.saveCourses(data);
+    return { success: true, level: newLevel };
+  }
+
+  deleteCourseLevel(levelId) {
+    const data = this.getCourses();
+    if (data.levels.length <= 1) {
+      return { success: false, reason: 'Cannot delete the only remaining level.' };
+    }
+    data.levels = data.levels.filter(l => l.id !== levelId);
+    this.saveCourses(data);
+    return { success: true };
   }
 }
 

@@ -2375,3 +2375,135 @@ body.theme-purple {
   }
 }
 
+/* ==========================================================================
+   COURSE & CURRICULUM MANAGEMENT
+   ========================================================================== */
+
+.course-levels-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  overflow-x: auto;
+  padding: 0.35rem 0.2rem 0.85rem 0.2rem;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 1.25rem;
+}
+
+.course-level-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1.1rem;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  background: #f8fafc;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.course-level-pill:hover {
+  background: #f1f5f9;
+  color: var(--text-primary);
+  border-color: #cbd5e1;
+}
+
+.course-level-pill.active {
+  background: linear-gradient(135deg, #1e293b, #0f172a);
+  color: #ffffff;
+  border-color: #0f172a;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+}
+
+.course-level-pill .pill-badge {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.08);
+  color: inherit;
+  font-weight: 600;
+}
+
+.course-level-pill.active .pill-badge {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+.course-banner-card {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1px solid var(--border-color);
+  border-left: 4px solid var(--accent-blue);
+  border-radius: 12px;
+  padding: 1.2rem 1.5rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.course-banner-title {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.course-banner-desc {
+  font-size: 0.825rem;
+  color: var(--text-secondary);
+  margin: 0.35rem 0 0 0;
+}
+
+.btn-canva {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.775rem;
+  background: linear-gradient(135deg, #00c4cc 0%, #7d2ae8 100%);
+  color: #ffffff !important;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(125, 42, 232, 0.25);
+  white-space: nowrap;
+}
+
+.btn-canva:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(125, 42, 232, 0.35);
+  opacity: 0.95;
+}
+
+.btn-canva.disabled,
+.btn-canva[disabled] {
+  background: #e2e8f0;
+  color: #94a3b8 !important;
+  box-shadow: none;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.session-number-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.3rem 0.75rem;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 0.8rem;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  white-space: nowrap;
+  min-width: 86px;
+}
+

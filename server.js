@@ -688,6 +688,24 @@ app.post('/api/firebase/admin-logs', async (req, res) => {
   }
 });
 
+// 15. Courses & Curriculum Management Endpoints
+app.get('/api/courses', async (req, res) => {
+  const db = readLocalDb();
+  res.json(db.courses || { levels: [] });
+});
+
+app.post('/api/courses', async (req, res) => {
+  try {
+    const coursesData = req.body;
+    const db = readLocalDb();
+    db.courses = coursesData;
+    writeLocalDb(db);
+    res.json({ success: true, courses: coursesData });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Fallback to front-end index.html for root or unknown route
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
