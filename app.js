@@ -52,6 +52,11 @@ class AttendanceApp {
 
     // Automatic Class Finish & Report Generation Engine (Saturday & Sunday)
     this.initAutoClassFinishEngine();
+
+    // Sync courses and curriculum from cloud across all devices
+    if (window.storageManager && typeof window.storageManager.syncCoursesFromCloud === 'function') {
+      window.storageManager.syncCoursesFromCloud().catch(() => {});
+    }
   }
 
   // Real-Time Live Clock & Date Widget
@@ -796,7 +801,14 @@ class AttendanceApp {
     if (tabId === 'analytics') this.renderAnalyticsDashboard();
     if (tabId === 'termcontrol') this.renderTermControlTab();
     if (tabId === 'examcontrol') this.renderExamControlTab();
-    if (tabId === 'course') this.renderCourseTab();
+    if (tabId === 'course') {
+      if (window.storageManager && typeof window.storageManager.syncCoursesFromCloud === 'function') {
+        window.storageManager.syncCoursesFromCloud().then(data => {
+          if (data && data.levels) this.renderCourseTab(this.activeCourseLevelId);
+        }).catch(() => {});
+      }
+      this.renderCourseTab();
+    }
   }
 
   // Render 11-Week Saturday & Sunday Matrix Table
@@ -2149,6 +2161,10 @@ class AttendanceApp {
       this.renderQuickAdminChips();
     } else if (type === 'branches') {
       this.populateBranchDropdowns();
+    } else if (type === 'courses') {
+      if (this.currentTab === 'course') {
+        this.renderCourseTab(this.activeCourseLevelId);
+      }
     }
   }
 

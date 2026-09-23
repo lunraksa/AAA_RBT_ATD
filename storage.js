@@ -852,6 +852,19 @@ class StorageManager {
           }
         }
       });
+
+      // 8. Realtime Courses & Curriculum Multi-Device Sync
+      if (typeof window.firebaseClient.onCoursesChange === 'function') {
+        window.firebaseClient.onCoursesChange(remoteCourses => {
+          if (remoteCourses && Array.isArray(remoteCourses.levels) && remoteCourses.levels.length > 0) {
+            console.log(`[Storage] Remote courses received from cloud: ${remoteCourses.levels.length} levels.`);
+            localStorage.setItem(STORAGE_KEYS.COURSES, JSON.stringify(remoteCourses));
+            if (window.app && typeof window.app.onRealtimeSync === 'function') {
+              window.app.onRealtimeSync('courses', remoteCourses);
+            }
+          }
+        });
+      }
     }, 300);
   }
 
@@ -1807,12 +1820,84 @@ class StorageManager {
   saveCourses(coursesData) {
     if (!coursesData || !coursesData.levels) return;
     localStorage.setItem(STORAGE_KEYS.COURSES, JSON.stringify(coursesData));
-    if (window.firebaseClient && window.firebaseClient.db) {
-      try {
-        window.firebaseClient.db.ref('courses').set(coursesData);
-      } catch (e) { }
+    if (window.firebaseClient) {
+      if (typeof window.firebaseClient.saveCourses === 'function') {
+        window.firebaseClient.saveCourses(coursesData);
+      } else if (window.firebaseClient.db) {
+        try {
+          window.firebaseClient.db.ref('courses').set(coursesData);
+        } catch (e) { }
+      }
     }
     return coursesData;
+  }
+
+  // Pull latest course levels from cloud (Firebase RTDB, Firestore, or API)
+  async syncCoursesFromCloud() {
+    const local = this.getCourses();
+
+    // If local device already has extra levels or custom links, upload to cloud so other devices get them!
+    if (local && local.levels && (local.levels.length > 2 || local.levels.some(l => l.sessions && l.sessions.some(s => s.link)))) {
+      this.saveCourses(local);
+    }
+
+    // 1. Try Firebase RTDB
+    if (window.firebaseClient && window.firebaseClient.db) {
+      try {
+        const snap = await window.firebaseClient.db.ref('courses').once('value');
+        const data = snap.val();
+        if (data && Array.isArray(data.levels) && data.levels.length > 0) {
+          if (data.levels.length >= (local.levels?.length || 0)) {
+            localStorage.setItem(STORAGE_KEYS.COURSES, JSON.stringify(data));
+            if (window.app && typeof window.app.onRealtimeSync === 'function') {
+              window.app.onRealtimeSync('courses', data);
+            }
+            return data;
+          }
+        }
+      } catch (e) { }
+    }
+
+    // 2. Try Cloud Firestore
+    if (window.firebaseClient && window.firebaseClient.firestore) {
+      try {
+        const doc = await window.firebaseClient.firestore.collection('courses').doc('curriculum').get();
+        if (doc.exists) {
+          const fsData = doc.data();
+          if (fsData && Array.isArray(fsData.levels) && fsData.levels.length > 0) {
+            if (fsData.levels.length >= (local.levels?.length || 0)) {
+              localStorage.setItem(STORAGE_KEYS.COURSES, JSON.stringify(fsData));
+              if (window.app && typeof window.app.onRealtimeSync === 'function') {
+                window.app.onRealtimeSync('courses', fsData);
+              }
+              return fsData;
+            }
+          }
+        }
+      } catch (e) { }
+    }
+
+    // 3. Try REST API
+    try {
+      const apiBase = (typeof window !== 'undefined' && window.location.origin.includes('http'))
+        ? `${window.location.origin}/api`
+        : 'http://localhost:5000/api';
+      const res = await fetch(`${apiBase}/courses`);
+      if (res.ok) {
+        const apiData = await res.json();
+        if (apiData && Array.isArray(apiData.levels) && apiData.levels.length > 0) {
+          if (apiData.levels.length >= (local.levels?.length || 0)) {
+            localStorage.setItem(STORAGE_KEYS.COURSES, JSON.stringify(apiData));
+            if (window.app && typeof window.app.onRealtimeSync === 'function') {
+              window.app.onRealtimeSync('courses', apiData);
+            }
+            return apiData;
+          }
+        }
+      }
+    } catch (e) { }
+
+    return local;
   }
 
   updateCourseLevel(levelId, updatedData) {

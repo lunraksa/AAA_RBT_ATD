@@ -15,7 +15,8 @@ class FirebaseClient {
       connection: [],
       adminLogs: [],
       activeAdmin: [],
-      admins: []
+      admins: [],
+      courses: []
     };
     this.isInitialized = false;
     this.init();
@@ -183,6 +184,31 @@ class FirebaseClient {
       console.log(`[FirebaseClient] Realtime Admins Directory Sync: ${adminsList.length} admins.`);
       this.notifyListeners('admins', adminsList);
     }, (err) => console.warn('[FirebaseClient] Admins directory listener error:', err));
+
+    // 8. Courses & Curriculum Multi-Device Realtime Listener
+    const coursesRef = this.db.ref('courses');
+    coursesRef.on('value', async (snapshot) => {
+      let data = snapshot.val();
+      if (!data || !data.levels || data.levels.length === 0) {
+        if (this.firestore) {
+          try {
+            const fsDoc = await this.firestore.collection('courses').doc('curriculum').get();
+            if (fsDoc.exists) {
+              const fsData = fsDoc.data();
+              if (fsData && fsData.levels && fsData.levels.length > 0) {
+                data = fsData;
+                this.db.ref('courses').set(fsData).catch(() => {});
+              }
+            }
+          } catch (fErr) { }
+        }
+      }
+
+      if (data && data.levels && Array.isArray(data.levels)) {
+        console.log(`[FirebaseClient] Realtime Courses Sync: ${data.levels.length} levels received.`);
+        this.notifyListeners('courses', data);
+      }
+    }, (err) => console.warn('[FirebaseClient] Courses listener error:', err));
   }
 
   // Listener registration
@@ -216,6 +242,10 @@ class FirebaseClient {
 
   onAdminsChange(cb) {
     if (typeof cb === 'function') this.listeners.admins.push(cb);
+  }
+
+  onCoursesChange(cb) {
+    if (typeof cb === 'function') this.listeners.courses.push(cb);
   }
 
   notifyListeners(type, data) {
@@ -825,6 +855,48 @@ class FirebaseClient {
         console.log(`[FirebaseClient] Exam ${examId} removed from Cloud Firestore.`);
       } catch (fErr) { }
     }
+    return true;
+  }
+
+  // Save Course Curriculum in realtime across all devices (RTDB + Firestore + Backend fallback)
+  async saveCourses(coursesData) {
+    if (!coursesData || !coursesData.levels) return false;
+    const cleanCourses = this.sanitizePayload(coursesData);
+    const payload = {
+      ...cleanCourses,
+      updatedAt: Date.now()
+    };
+
+    if (this.db) {
+      try {
+        await this.db.ref('courses').set(payload);
+        console.log('[FirebaseClient] Courses synced to Firebase RTDB across all devices.');
+      } catch (err) {
+        console.error('[FirebaseClient] Save courses failed (RTDB):', err);
+      }
+    }
+
+    if (this.firestore) {
+      try {
+        await this.firestore.collection('courses').doc('curriculum').set(payload, { merge: true });
+        console.log('[FirebaseClient] Courses synced to Cloud Firestore.');
+      } catch (fErr) {
+        console.warn('[FirebaseClient] Firestore save courses notice:', fErr.message);
+      }
+    }
+
+    // Backend fallback sync
+    try {
+      const apiBase = (typeof window !== 'undefined' && window.location.origin.includes('http'))
+        ? `${window.location.origin}/api`
+        : 'http://localhost:5000/api';
+      fetch(`${apiBase}/courses`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).catch(() => { });
+    } catch (apiErr) { }
+
     return true;
   }
 
