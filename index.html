@@ -15,7 +15,7 @@
     rel="stylesheet">
 
   <!-- Custom Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=20260922_v10">
+  <link rel="stylesheet" href="styles.css?v=20260923_v1">
 
   <!-- HTML2PDF Library for Direct PDF Export (Local Fast Bundle) -->
   <script src="html2pdf.bundle.min.js"></script>
@@ -736,11 +736,24 @@
                   <span>Exam Control & Student Grade Management</span>
                 </h3>
                 <p style="font-size:0.8rem; color:var(--text-secondary); margin-top:0.25rem;">
-                  Manage Robotics Mid-Term exams, practical project scores, theory quizzes, and class grade sheets.
+                  Manage Robotics Final examinations, practical project scores, theory quizzes, and class grade sheets.
                 </p>
               </div>
 
               <div style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
+                <div style="display:flex; align-items:center; gap:0.4rem;">
+                  <label for="examBranchFilter"
+                    style="font-size:0.8rem; font-weight:600; color:var(--text-secondary); white-space:nowrap;">Branch:</label>
+                  <select id="examBranchFilter" class="form-select"
+                    style="font-size:0.825rem; padding:0.4rem 0.65rem; font-weight:600; min-width:145px;"
+                    onchange="app.handleExamBranchFilterChange(this)" title="Filter Exam by Branch">
+                    <option value="all">All Branches</option>
+                  </select>
+                </div>
+                <button id="examCreateBranchBtn" class="btn btn-secondary" style="font-size:0.825rem; padding:0.45rem 0.85rem;"
+                  onclick="app.openCreateBranchModal()">
+                  + Create Branch
+                </button>
                 <button id="openNewExamBtn" class="btn btn-primary" style="font-size:0.825rem; padding:0.45rem 0.85rem;"
                   onclick="app.openNewExamModal()">
                   + Create New Exam
@@ -937,7 +950,7 @@
             <select id="reportBranchSelector" class="form-select"
               style="font-weight:700; font-size:0.8rem; padding:0.35rem 0.65rem; background:#1e293b; color:#ffffff; border:1px solid #475569; border-radius:8px; min-width:145px;"
               title="Filter Report by Branch">
-              <option value="all">🏢 All Branches</option>
+              <option value="all">All Branches</option>
             </select>
             <select id="reportDaySelector" class="form-select"
               style="font-weight:700; font-size:0.8rem; padding:0.35rem 0.65rem; background:#1e293b; color:#ffffff; border:1px solid #475569; border-radius:8px;">
@@ -1177,10 +1190,18 @@
             <div class="form-group">
               <label for="examNameInput">Exam Title / Assessment Name *</label>
               <input type="text" id="examNameInput" class="form-input"
-                placeholder="e.g. Mid-Term Robotics Practical Exam" required />
+                placeholder="e.g. Final Robotics Practical Exam" required />
             </div>
 
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-top:0.75rem;">
+              <div class="form-group">
+                <label for="examBranchInput">Academy Branch *</label>
+                <select id="examBranchInput" class="form-select" required style="font-weight:600;"
+                  onchange="app.handleExamBranchSelectChange(this)">
+                  <option value="all">All Branches</option>
+                  <option value="__new__">+ Create Branch</option>
+                </select>
+              </div>
               <div class="form-group">
                 <label for="examClassInput">Target Class *</label>
                 <select id="examClassInput" class="form-select" required style="font-weight:600;">
@@ -1196,27 +1217,43 @@
                   <option value="Level 5">Level 5</option>
                 </select>
               </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-top:0.75rem;">
               <div class="form-group">
                 <label for="examDateInput">Exam Date *</label>
                 <input type="date" id="examDateInput" class="form-input" required />
               </div>
-            </div>
-
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-top:0.75rem;">
               <div class="form-group">
                 <label for="examMaxScoreInput">Max Score (Points) *</label>
                 <input type="number" id="examMaxScoreInput" class="form-input" value="100" min="10" max="500"
                   required />
               </div>
-              <div class="form-group">
-                <label for="examTypeInput">Assessment Type *</label>
-                <select id="examTypeInput" class="form-select" required style="font-weight:600;">
-                  <option value="Practical Project">Practical Project</option>
-                  <option value="Theory Exam">Theory Exam</option>
-                  <option value="Coding Quiz">Coding Quiz</option>
-                  <option value="Final Evaluation">Final Evaluation</option>
-                </select>
+            </div>
+
+            <div class="form-group" style="margin-top:0.75rem;">
+              <label for="examTypeInput">Assessment Type *</label>
+              <select id="examTypeInput" class="form-select" required style="font-weight:600;">
+                <option value="Practical Project">Practical Project</option>
+                <option value="Theory Exam">Theory Exam</option>
+                <option value="Coding Quiz">Coding Quiz</option>
+                <option value="Final Evaluation">Final Evaluation</option>
+              </select>
+            </div>
+
+            <!-- Option to create separate exams for each branch simultaneously -->
+            <div id="examSeparateBranchesWrapper"
+              style="margin-top:0.85rem; padding:0.65rem 0.85rem; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; display:flex; align-items:center; justify-content:space-between;">
+              <div>
+                <label for="examCreateSeparateBranches"
+                  style="font-weight:700; font-size:0.8rem; color:var(--text-primary); cursor:pointer; display:block;">
+                  Create Separate Exam for Each Branch
+                </label>
+                <span style="font-size:0.725rem; color:var(--text-muted); display:block;">
+                  Generate an individual exam grade sheet for every branch automatically
+                </span>
               </div>
+              <input type="checkbox" id="examCreateSeparateBranches" style="width:18px; height:18px; cursor:pointer;" />
             </div>
           </div>
 
@@ -1702,8 +1739,8 @@
   <script src="firebase-client.js"></script>
   <script src="postgres-client.js"></script>
   <script src="db.js"></script>
-  <script src="storage.js?v=20260922_v10"></script>
-  <script src="app.js?v=20260922_v10"></script>
+  <script src="storage.js?v=20260923_v1"></script>
+  <script src="app.js?v=20260923_v1"></script>
 </body>
 
 </html>

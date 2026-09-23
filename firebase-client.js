@@ -811,6 +811,23 @@ class FirebaseClient {
     return true;
   }
 
+  // Delete Exam (RTDB + Firestore)
+  async deleteExam(examId) {
+    if (!examId) return false;
+    if (this.db) {
+      try {
+        await this.db.ref('exams/' + examId).remove();
+      } catch (err) { }
+    }
+    if (this.firestore) {
+      try {
+        await this.firestore.collection('exams').doc(examId).delete();
+        console.log(`[FirebaseClient] Exam ${examId} removed from Cloud Firestore.`);
+      } catch (fErr) { }
+    }
+    return true;
+  }
+
   // Seed default dataset to Firebase RTDB if empty
   async seedInitialData(defaultStudents = [], initialLogs = []) {
     if (!this.db) return;

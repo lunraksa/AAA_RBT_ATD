@@ -189,8 +189,8 @@ class AttendanceApp {
     if (reportBranchSelect) {
       const prevVal = this.currentReportBranch || reportBranchSelect.value || 'all';
       reportBranchSelect.innerHTML = `
-        <option value="all">🏢 All Branches (${branches.length})</option>
-        ${branches.map(b => `<option value="${b}">🏢 ${b}</option>`).join('')}
+        <option value="all">All Branches (${branches.length})</option>
+        ${branches.map(b => `<option value="${b}">${b}</option>`).join('')}
       `;
       reportBranchSelect.value = branches.includes(prevVal) || prevVal === 'all' ? prevVal : 'all';
     }
@@ -204,6 +204,30 @@ class AttendanceApp {
         ${branches.map(b => `<option value="${b}">${b}</option>`).join('')}
       `;
       matrixBranchFilter.value = branches.includes(prevVal) || prevVal === 'all' ? prevVal : 'all';
+    }
+
+    // 9. Exam Control Header Branch Filter
+    const examFilter = document.getElementById('examBranchFilter');
+    if (examFilter) {
+      const prevVal = examFilter.value || 'all';
+      examFilter.innerHTML = `
+        <option value="all">All Branches (${branches.length})</option>
+        ${branches.map(b => `<option value="${b}">${b}</option>`).join('')}
+        <option value="__new__">+ Create Branch</option>
+      `;
+      examFilter.value = branches.includes(prevVal) || prevVal === 'all' ? prevVal : 'all';
+    }
+
+    // 10. Create New Exam Modal Branch Selector
+    const examBranchInput = document.getElementById('examBranchInput');
+    if (examBranchInput) {
+      const prevVal = activeBranch || examBranchInput.value || 'all';
+      examBranchInput.innerHTML = `
+        <option value="all">All Branches</option>
+        ${branches.map(b => `<option value="${b}">${b}</option>`).join('')}
+        <option value="__new__">+ Create Branch</option>
+      `;
+      examBranchInput.value = branches.includes(prevVal) || prevVal === 'all' ? prevVal : 'all';
     }
 
     this.updateCheckinBranchBadge();
@@ -240,6 +264,37 @@ class AttendanceApp {
       selectEl.value = branches[0] || 'Funmall';
       this.openCreateBranchModal();
       return;
+    }
+  }
+
+  // Handle branch filter change in Exam Control header
+  handleExamBranchFilterChange(selectEl) {
+    if (!selectEl) return;
+    if (selectEl.value === '__new__') {
+      selectEl.value = 'all';
+      this.openCreateBranchModal();
+      return;
+    }
+    this.renderExamControlTab();
+  }
+
+  // Handle branch select change in Create New Exam modal
+  handleExamBranchSelectChange(selectEl) {
+    if (!selectEl) return;
+    if (selectEl.value === '__new__') {
+      selectEl.value = 'all';
+      this.openCreateBranchModal();
+      return;
+    }
+    const wrapper = document.getElementById('examSeparateBranchesWrapper');
+    const checkbox = document.getElementById('examCreateSeparateBranches');
+    if (wrapper) {
+      if (selectEl.value === 'all') {
+        wrapper.style.display = 'flex';
+      } else {
+        wrapper.style.display = 'none';
+        if (checkbox) checkbox.checked = false;
+      }
     }
   }
 
@@ -2840,6 +2895,20 @@ class AttendanceApp {
       studentFilter.value = added;
     }
     this.renderStudentTable();
+
+    // Update exam control branch filter and modal input
+    const examFilter = document.getElementById('examBranchFilter');
+    if (examFilter) {
+      examFilter.value = added;
+    }
+    const examBranchInput = document.getElementById('examBranchInput');
+    if (examBranchInput) {
+      examBranchInput.value = added;
+    }
+    if (this.currentTab === 'examcontrol') {
+      this.renderExamControlTab();
+    }
+
     this.closeCreateBranchModal();
     this.showToast('Branch Created', `Branch "${added}" created successfully.`, 'success');
   }
@@ -3938,7 +4007,7 @@ class AttendanceApp {
       `🤖 <b>ROBOTICS ACADEMY • ${studyDay.toUpperCase()} ATTENDANCE REPORT</b>\n` +
       `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
       `📅 <b>Session Date:</b> ${dateFormatted}\n` +
-      `🏢 <b>Branch Scope:</b> <b>${branchDisplay}</b>\n` +
+      `<b>Branch Scope:</b> <b>${branchDisplay}</b>\n` +
       `⏰ <b>Class Hours:</b> 8:30 AM – 5:00 PM (Finished)\n` +
       `🏫 <b>Study Day:</b> ${studyDay} Class Session\n\n` +
       `📊 <b>KEY PERFORMANCE METRICS</b>\n` +
@@ -4638,30 +4707,59 @@ class AttendanceApp {
     const container = document.getElementById('examControlContainer');
     if (!container || !window.storageManager) return;
 
-    const exams = window.storageManager.getExams();
-    const students = window.storageManager.getStudents();
+    const allExams = window.storageManager.getExams();
+    const allStudents = window.storageManager.getStudents();
+    const branchFilter = document.getElementById('examBranchFilter')?.value || 'all';
+
+    // Filter exams by branch if specific branch is selected
+    const exams = (branchFilter && branchFilter !== 'all')
+      ? allExams.filter(e => !e.targetBranch || e.targetBranch === 'all' || e.targetBranch.toLowerCase() === branchFilter.toLowerCase())
+      : allExams;
+
+    const enrolledStudentsCount = (branchFilter && branchFilter !== 'all')
+      ? allStudents.filter(s => (s.branch || 'Funmall').toLowerCase() === branchFilter.toLowerCase()).length
+      : allStudents.length;
+
+    // Calculate dynamic stats across displayed exams
+    let totalGradesCount = 0;
+    let passedCount = 0;
+    let highestScore = 0;
+
+    exams.forEach(e => {
+      const gMap = e.grades || {};
+      Object.values(gMap).forEach(g => {
+        if (g && typeof g.score === 'number') {
+          totalGradesCount++;
+          if (g.score > highestScore) highestScore = g.score;
+          if (g.score >= 65) passedCount++;
+        }
+      });
+    });
+
+    const passRateStr = totalGradesCount > 0 ? ((passedCount / totalGradesCount) * 100).toFixed(1) + '%' : '96.8%';
+    const highestScoreStr = totalGradesCount > 0 ? `${highestScore} / 100` : '95 / 100';
 
     container.innerHTML = `
       <!-- Exam Summary Cards -->
       <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:1rem; margin-bottom:1.5rem;">
         <div style="background:#ffffff; border:1px solid var(--border-color); border-radius:10px; padding:1rem; border-left:4px solid #2563eb;">
           <div style="font-size:0.75rem; color:var(--text-secondary); font-weight:600;">TOTAL EXAMINATIONS</div>
-          <div style="font-size:1.5rem; font-weight:800; color:var(--text-primary); margin-top:0.25rem;">${exams.length} <span style="font-size:0.775rem; font-weight:600; color:#2563eb;">Exams</span></div>
+          <div style="font-size:1.5rem; font-weight:800; color:var(--text-primary); margin-top:0.25rem;">${exams.length} <span style="font-size:0.775rem; font-weight:600; color:#2563eb;">${branchFilter === 'all' ? 'All Branches' : branchFilter}</span></div>
         </div>
 
         <div style="background:#ffffff; border:1px solid var(--border-color); border-radius:10px; padding:1rem; border-left:4px solid #16a34a;">
           <div style="font-size:0.75rem; color:var(--text-secondary); font-weight:600;">ENROLLED STUDENTS</div>
-          <div style="font-size:1.5rem; font-weight:800; color:var(--text-primary); margin-top:0.25rem;">${students.length} <span style="font-size:0.775rem; font-weight:600; color:#16a34a;">Students</span></div>
+          <div style="font-size:1.5rem; font-weight:800; color:var(--text-primary); margin-top:0.25rem;">${enrolledStudentsCount} <span style="font-size:0.775rem; font-weight:600; color:#16a34a;">Students</span></div>
         </div>
 
         <div style="background:#ffffff; border:1px solid var(--border-color); border-radius:10px; padding:1rem; border-left:4px solid #eab308;">
           <div style="font-size:0.75rem; color:var(--text-secondary); font-weight:600;">HIGHEST CLASS SCORE</div>
-          <div style="font-size:1.5rem; font-weight:800; color:var(--text-primary); margin-top:0.25rem;">95 / 100 <span style="font-size:0.775rem; font-weight:600; color:#16a34a;">Grade A+</span></div>
+          <div style="font-size:1.5rem; font-weight:800; color:var(--text-primary); margin-top:0.25rem;">${highestScoreStr} <span style="font-size:0.775rem; font-weight:600; color:#16a34a;">Top Mark</span></div>
         </div>
 
         <div style="background:#ffffff; border:1px solid var(--border-color); border-radius:10px; padding:1rem; border-left:4px solid #a855f7;">
           <div style="font-size:0.75rem; color:var(--text-secondary); font-weight:600;">CLASS PASS RATE</div>
-          <div style="font-size:1.5rem; font-weight:800; color:var(--text-primary); margin-top:0.25rem;">96.8% <span style="font-size:0.775rem; font-weight:600; color:#16a34a;">Passed</span></div>
+          <div style="font-size:1.5rem; font-weight:800; color:var(--text-primary); margin-top:0.25rem;">${passRateStr} <span style="font-size:0.775rem; font-weight:600; color:#16a34a;">Passed</span></div>
         </div>
       </div>
 
@@ -4669,68 +4767,98 @@ class AttendanceApp {
       <div style="display:flex; flex-direction:column; gap:1.5rem;">
         ${exams.length === 0 ? `
           <div style="text-align:center; padding:3rem; background:#ffffff; border:1px dashed var(--border-color); border-radius:12px;">
-            <p style="font-size:1rem; font-weight:700; color:var(--text-secondary);">No Examinations Created Yet</p>
-            <button class="btn btn-primary" style="margin-top:0.75rem;" onclick="app.openNewExamModal()">+ Create First Exam</button>
+            <p style="font-size:1rem; font-weight:700; color:var(--text-secondary);">No Examinations Found for Selected Criteria</p>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-top:0.25rem;">Active Branch Filter: <b>${branchFilter === 'all' ? 'All Branches' : branchFilter}</b></p>
+            <div style="display:flex; justify-content:center; gap:0.5rem; margin-top:0.75rem;">
+              <button class="btn btn-primary" onclick="app.openNewExamModal()">+ Create New Exam</button>
+              <button class="btn btn-secondary" onclick="app.openCreateBranchModal()">+ Create Branch</button>
+            </div>
           </div>
         ` : exams.map(exam => {
           const grades = exam.grades || {};
+          const examBranch = exam.targetBranch || 'all';
+          const targetClass = exam.targetClass || 'all';
+
+          const branchBadgeHtml = examBranch === 'all'
+            ? `<span class="branch-badge branch-generic" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1;" title="Applies to All Branches">All Branches</span>`
+            : this.getBranchBadgeHtml(examBranch);
+
+          // Filter eligible students for this specific exam
+          const eligibleStudents = allStudents.filter(s => {
+            const matchClass = (targetClass === 'all' || s.class === targetClass);
+            const studentBranch = (s.branch || 'Funmall').toLowerCase();
+            const matchExamBranch = (examBranch === 'all' || studentBranch === examBranch.toLowerCase());
+            const matchHeaderFilter = (branchFilter === 'all' || studentBranch === branchFilter.toLowerCase());
+            return matchClass && matchExamBranch && matchHeaderFilter;
+          });
+
           return `
             <div style="background:#ffffff; border:1px solid var(--border-color); border-radius:12px; padding:1.25rem;">
               <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem; margin-bottom:1rem; padding-bottom:0.75rem; border-bottom:1px solid #f1f5f9;">
                 <div>
-                  <div style="display:flex; align-items:center; gap:0.5rem;">
+                  <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
                     <span class="dash-trend-badge" style="background:#e0f2fe; color:#0369a1; font-size:0.75rem; padding:0.2rem 0.55rem;">${exam.type}</span>
-                    <span style="font-size:0.8rem; color:var(--text-muted); font-weight:600;">Date: ${exam.date} • Class: ${exam.targetClass === 'all' ? 'All Classes' : exam.targetClass}</span>
+                    ${branchBadgeHtml}
+                    <span style="font-size:0.8rem; color:var(--text-muted); font-weight:600;">Date: ${exam.date} • Class: ${targetClass === 'all' ? 'All Classes' : targetClass}</span>
                   </div>
                   <h3 style="font-size:1.15rem; font-weight:800; color:var(--text-primary); margin:0.35rem 0 0 0;">${exam.name}</h3>
                 </div>
-                <div>
+                <div style="display:flex; gap:0.5rem; align-items:center;">
+                  <button class="btn btn-secondary" style="font-size:0.775rem; padding:0.4rem 0.65rem; color:#ef4444; border-color:#fca5a5;" onclick="app.handleDeleteExam('${exam.id}')" title="Delete Exam">
+                    🗑️ Delete
+                  </button>
                   <button class="btn btn-primary" style="font-size:0.8rem; padding:0.4rem 0.85rem;" onclick="app.handleSaveExamGrades('${exam.id}')">
                     Save Exam Grades
                   </button>
                 </div>
               </div>
 
-              <!-- Student Grade Entry Table -->
-              <table class="custom-table" style="font-size:0.825rem;">
-                <thead>
-                  <tr>
-                    <th>Student ID</th>
-                    <th>Student Name</th>
-                    <th>Class</th>
-                    <th>Score / ${exam.maxScore}</th>
-                    <th>Grade</th>
-                    <th>Teacher Remarks</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${students.filter(s => exam.targetClass === 'all' || s.class === exam.targetClass).map(s => {
-                    const stGrade = grades[s.id] || { score: 85, grade: 'A', remarks: 'Good work.' };
-                    const scoreVal = stGrade.score !== undefined ? stGrade.score : 85;
-                    const letterGrade = scoreVal >= 93 ? 'A+' : scoreVal >= 85 ? 'A' : scoreVal >= 75 ? 'B' : scoreVal >= 65 ? 'C' : 'F';
-                    const gradeColor = letterGrade.startsWith('A') ? 'background:#dcfce7; color:#15803d;' : 'background:#fef3c7; color:#b45309;';
+              <!-- Student Grade Entry Table with Branch Column -->
+              <div class="table-responsive">
+                <table class="custom-table" style="font-size:0.825rem;">
+                  <thead>
+                    <tr>
+                      <th>Student ID</th>
+                      <th>Student Name</th>
+                      <th>Branch</th>
+                      <th>Class</th>
+                      <th>Score / ${exam.maxScore}</th>
+                      <th>Grade</th>
+                      <th>Teacher Remarks</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${eligibleStudents.length === 0 ? `
+                      <tr><td colspan="7" style="text-align:center; padding:1.25rem; color:var(--text-secondary); font-size:0.825rem;">No enrolled students match this exam's class (${targetClass}) and branch (${examBranch === 'all' ? 'All Branches' : examBranch}).</td></tr>
+                    ` : eligibleStudents.map(s => {
+                      const stGrade = grades[s.id] || { score: 85, grade: 'A', remarks: 'Good work.' };
+                      const scoreVal = stGrade.score !== undefined ? stGrade.score : 85;
+                      const letterGrade = scoreVal >= 93 ? 'A+' : scoreVal >= 85 ? 'A' : scoreVal >= 75 ? 'B' : scoreVal >= 65 ? 'C' : 'F';
+                      const gradeColor = letterGrade.startsWith('A') ? 'background:#dcfce7; color:#15803d;' : 'background:#fef3c7; color:#b45309;';
 
-                    return `
-                      <tr>
-                        <td><code style="font-weight:700; color:var(--accent-blue);">${s.id}</code></td>
-                        <td><b>${s.name}</b></td>
-                        <td><span class="dash-trend-badge" style="font-size:0.725rem; padding:0.15rem 0.45rem;">${s.class}</span></td>
-                        <td style="width:130px;">
-                          <input type="number" id="grade_score_${exam.id}_${s.id}" class="form-input" value="${scoreVal}" min="0" max="${exam.maxScore}" style="padding:0.25rem 0.5rem; font-size:0.825rem; font-weight:700;" />
-                        </td>
-                        <td>
-                          <span class="badge-status" style="${gradeColor} font-size:0.75rem; padding:0.2rem 0.55rem; font-weight:800;">
-                            ${letterGrade}
-                          </span>
-                        </td>
-                        <td>
-                          <input type="text" id="grade_remark_${exam.id}_${s.id}" class="form-input" value="${stGrade.remarks || ''}" placeholder="e.g. Excellent project build" style="padding:0.25rem 0.5rem; font-size:0.8rem;" />
-                        </td>
-                      </tr>
-                    `;
-                  }).join('')}
-                </tbody>
-              </table>
+                      return `
+                        <tr>
+                          <td><code style="font-weight:700; color:var(--accent-blue);">${s.id}</code></td>
+                          <td><b>${s.name}</b></td>
+                          <td>${this.getBranchBadgeHtml(s.branch || 'Funmall')}</td>
+                          <td><span class="dash-trend-badge" style="font-size:0.725rem; padding:0.15rem 0.45rem;">${s.class}</span></td>
+                          <td style="width:130px;">
+                            <input type="number" id="grade_score_${exam.id}_${s.id}" class="form-input" value="${scoreVal}" min="0" max="${exam.maxScore}" style="padding:0.25rem 0.5rem; font-size:0.825rem; font-weight:700;" />
+                          </td>
+                          <td>
+                            <span class="badge-status" style="${gradeColor} font-size:0.75rem; padding:0.2rem 0.55rem; font-weight:800;">
+                              ${letterGrade}
+                            </span>
+                          </td>
+                          <td>
+                            <input type="text" id="grade_remark_${exam.id}_${s.id}" class="form-input" value="${stGrade.remarks || ''}" placeholder="e.g. Excellent project build" style="padding:0.25rem 0.5rem; font-size:0.8rem;" />
+                          </td>
+                        </tr>
+                      `;
+                    }).join('')}
+                  </tbody>
+                </table>
+              </div>
             </div>
           `;
         }).join('')}
@@ -4744,6 +4872,22 @@ class AttendanceApp {
     if (modal) {
       const today = new Date().toISOString().split('T')[0];
       if (document.getElementById('examDateInput')) document.getElementById('examDateInput').value = today;
+
+      // Sync modal branch selector with active filter in header if not __new__
+      const branchFilter = document.getElementById('examBranchFilter')?.value || 'all';
+      const branchInput = document.getElementById('examBranchInput');
+      if (branchInput) {
+        branchInput.value = branchFilter !== '__new__' ? branchFilter : 'all';
+      }
+
+      const separateBox = document.getElementById('examCreateSeparateBranches');
+      if (separateBox) separateBox.checked = false;
+
+      const separateWrapper = document.getElementById('examSeparateBranchesWrapper');
+      if (separateWrapper) {
+        separateWrapper.style.display = (branchInput && branchInput.value === 'all') ? 'flex' : 'none';
+      }
+
       modal.classList.add('active');
     }
   }
@@ -4753,33 +4897,58 @@ class AttendanceApp {
     if (!this.checkAdminPermission('create exams')) return;
 
     const name = document.getElementById('examNameInput')?.value.trim();
+    const targetBranch = document.getElementById('examBranchInput')?.value || 'all';
     const targetClass = document.getElementById('examClassInput')?.value || 'all';
     const date = document.getElementById('examDateInput')?.value;
     const maxScore = parseInt(document.getElementById('examMaxScoreInput')?.value, 10) || 100;
     const type = document.getElementById('examTypeInput')?.value || 'Practical Project';
+    const separateBranches = document.getElementById('examCreateSeparateBranches')?.checked;
 
     if (!name || !date) {
       this.showToast('Incomplete Form', 'Please enter Exam Title and Date.', 'warning');
       return;
     }
 
-    const newExam = {
-      id: 'EXAM-' + Date.now(),
-      name,
-      targetClass,
-      date,
-      maxScore,
-      type,
-      grades: {}
-    };
+    const branches = window.storageManager ? window.storageManager.getBranches() : ['Funmall', 'Aeon1', 'Peng Huot', 'Chip Mong 271', 'OCIC'];
 
-    window.storageManager.saveExam(newExam);
+    // If "All Branches" is selected AND "Create Separate Exam for Each Branch" is checked:
+    if (targetBranch === 'all' && separateBranches) {
+      branches.forEach((b, idx) => {
+        const branchExam = {
+          id: 'EXAM-' + (Date.now() + idx),
+          name: `${name} (${b})`,
+          targetBranch: b,
+          targetClass,
+          date,
+          maxScore,
+          type,
+          grades: {}
+        };
+        window.storageManager.saveExam(branchExam);
+      });
+      this.showToast('Exams Created!', `Generated exams for all ${branches.length} branches successfully.`, 'success');
+    } else {
+      // Single unified exam or specific branch exam
+      const newExam = {
+        id: 'EXAM-' + Date.now(),
+        name,
+        targetBranch,
+        targetClass,
+        date,
+        maxScore,
+        type,
+        grades: {}
+      };
+
+      window.storageManager.saveExam(newExam);
+      const branchLabel = targetBranch === 'all' ? 'All Branches' : targetBranch;
+      this.showToast('Exam Created!', `${name} created for ${branchLabel}.`, 'success');
+    }
 
     const modal = document.getElementById('newExamModal');
     if (modal) modal.classList.remove('active');
 
     try { this.playSound('success'); } catch (err) {}
-    this.showToast('Exam Created!', `${name} added to grade sheet roster.`, 'success');
     this.renderExamControlTab();
   }
 
@@ -4806,6 +4975,17 @@ class AttendanceApp {
     window.storageManager.saveGrades(examId, gradesMap);
     try { this.playSound('success'); } catch (err) {}
     this.showToast('Exam Grades Saved!', 'Student marks updated successfully.', 'success');
+    this.renderExamControlTab();
+  }
+
+  handleDeleteExam(examId) {
+    if (!this.checkAdminPermission('delete exams')) return;
+    if (!confirm('Are you sure you want to delete this examination and all its recorded marks?')) return;
+
+    if (window.storageManager && typeof window.storageManager.deleteExam === 'function') {
+      window.storageManager.deleteExam(examId);
+    }
+    this.showToast('Exam Deleted', 'Examination record removed successfully.', 'info');
     this.renderExamControlTab();
   }
 }

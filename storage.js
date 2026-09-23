@@ -1653,37 +1653,40 @@ class StorageManager {
     return { success: false, reason: 'Term not found.' };
   }
 
-  // Examinations & Assessments Management
+  // Examinations & Assessments Management (Final Exam Only)
   getExams() {
     try {
       const defaultExams = [
         {
-          id: 'EXAM-001',
-          name: 'Mid-Term Robotics & AI Practical Project',
-          targetClass: 'all',
-          date: '2026-09-15',
-          maxScore: 100,
-          type: 'Practical Project',
-          grades: {
-            'STU-001': { score: 92, grade: 'A', remarks: 'Excellent circuit assembly & code logic.' },
-            'STU-002': { score: 88, grade: 'A', remarks: 'Strong 3D modeling & structure design.' },
-            'STU-003': { score: 78, grade: 'B', remarks: 'Good HTML UI layout.' },
-            'STU-004': { score: 95, grade: 'A+', remarks: 'Outstanding Python script algorithms.' }
-          }
-        },
-        {
           id: 'EXAM-002',
           name: 'Final Robotics Hardware & Sensor Exam',
-          targetClass: 'AI',
+          targetBranch: 'all',
+          targetClass: 'all',
           date: '2026-10-10',
           maxScore: 100,
           type: 'Final Evaluation',
           grades: {
-            'STU-001': { score: 95, grade: 'A+', remarks: 'Top performance in AI vision model training.' }
+            'STU-001': { score: 95, grade: 'A+', remarks: 'Top performance in AI vision model training.' },
+            'STU-002': { score: 90, grade: 'A', remarks: 'Excellent robotic build.' },
+            'STU-003': { score: 85, grade: 'A', remarks: 'Good project presentation.' },
+            'STU-004': { score: 96, grade: 'A+', remarks: 'Outstanding Python code.' }
           }
         }
       ];
-      return JSON.parse(localStorage.getItem(STORAGE_KEYS.EXAMS)) || defaultExams;
+
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEYS.EXAMS));
+      if (stored && Array.isArray(stored)) {
+        // Exclude any mid-term exam so we have final exams only
+        const filtered = stored.filter(e => e.id !== 'EXAM-001' && !e.name.toLowerCase().includes('mid-term'));
+        if (filtered.length !== stored.length) {
+          localStorage.setItem(STORAGE_KEYS.EXAMS, JSON.stringify(filtered));
+          if (window.firebaseClient && typeof window.firebaseClient.deleteExam === 'function') {
+            window.firebaseClient.deleteExam('EXAM-001');
+          }
+        }
+        return filtered.length > 0 ? filtered : defaultExams;
+      }
+      return defaultExams;
     } catch (e) {
       return [];
     }
@@ -1702,6 +1705,17 @@ class StorageManager {
       window.firebaseClient.saveExam(examData);
     }
     return examData;
+  }
+
+  deleteExam(examId) {
+    if (!examId) return false;
+    let exams = this.getExams();
+    exams = exams.filter(e => e.id !== examId);
+    localStorage.setItem(STORAGE_KEYS.EXAMS, JSON.stringify(exams));
+    if (window.firebaseClient && typeof window.firebaseClient.deleteExam === 'function') {
+      window.firebaseClient.deleteExam(examId);
+    }
+    return true;
   }
 
   saveGrades(examId, gradesMap) {
