@@ -19,7 +19,9 @@ const NAME_MAP = {
   'seangnavorn': 'SEANG NAVORN',
   'nysokchanthyphynit': 'NY SOKCHANTHYPHYNIT',
   'kimhuoy': 'CHOU KIMHUOY',
-  'choukimhuoy': 'CHOU KIMHUOY'
+  'choukimhuoy': 'CHOU KIMHUOY',
+  'runsokheng': 'RUN SOKHENG',
+  'sokheng': 'RUN SOKHENG'
 };
 
 async function updateFirebaseAdmins() {

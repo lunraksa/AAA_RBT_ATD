@@ -178,6 +178,30 @@ const DEFAULT_ADMINS = [
     password: 'admin123',
     pin: '1234',
     isAdmin: true
+  },
+  {
+    username: 'runsokheng',
+    name: 'RUN SOKHENG',
+    role: 'Administrator & Robotics Lead',
+    photo: 'assets/run_sokheng.jpg',
+    email: 'runsokheng@robotics.edu',
+    phone: '+855 12 888 999',
+    bio: 'Robotics & STEM Department Administrator',
+    password: 'admin123',
+    pin: '1234',
+    isAdmin: true
+  },
+  {
+    username: 'sokheng',
+    name: 'RUN SOKHENG',
+    role: 'Administrator & Robotics Lead',
+    photo: 'assets/run_sokheng.jpg',
+    email: 'runsokheng@robotics.edu',
+    phone: '+855 12 888 999',
+    bio: 'Robotics & STEM Department Administrator',
+    password: 'admin123',
+    pin: '1234',
+    isAdmin: true
   }
 ];
 
@@ -194,7 +218,9 @@ const KNOWN_ADMIN_NAMES = {
   'socheata': 'VIT SOCHEATA',
   'sovanlyseth': 'PHONN SOVANLYSETH',
   'kimhuoy': 'CHOU KIMHUOY',
-  'choukimhuoy': 'CHOU KIMHUOY'
+  'choukimhuoy': 'CHOU KIMHUOY',
+  'runsokheng': 'RUN SOKHENG',
+  'sokheng': 'RUN SOKHENG'
 };
 
 // 5 Recognized Branches across AAA Robotics Academy
@@ -303,6 +329,9 @@ class StorageManager {
     if ((cleanUser === 'kimhuoy' || cleanUser === 'choukimhuoy' || cleanName.includes('kimhuoy') || cleanName.includes('huoy') || cleanName.includes('chou')) && (!photo || photo.includes('favicon') || photo.includes('robot'))) {
       photo = 'assets/chou_kimhuoy.jpg';
     }
+    if ((cleanUser === 'runsokheng' || cleanUser === 'sokheng' || cleanName.includes('sokheng') || cleanName.includes('heng') || cleanName.includes('run')) && (!photo || photo.includes('favicon') || photo.includes('robot'))) {
+      photo = 'assets/run_sokheng.jpg';
+    }
 
     const rawName = session.name || (matchedAdmin && matchedAdmin.name) || adminConfig.name || 'LUN RAKSA';
     const mappedName = KNOWN_ADMIN_NAMES[session.username] || (rawName ? rawName.toUpperCase() : 'LUN RAKSA');
@@ -325,7 +354,9 @@ class StorageManager {
     const cleanUser = String(session.username || '').toLowerCase().replace(/[^a-z0-9]/g, '');
     const cleanName = String(profileData.name || session.name || '').toLowerCase();
     let defaultPhoto = 'assets/lun_raksa.jpg';
-    if (cleanUser === 'kimhuoy' || cleanUser === 'choukimhuoy' || cleanName.includes('kimhuoy') || cleanName.includes('chou')) {
+    if (cleanUser === 'runsokheng' || cleanUser === 'sokheng' || cleanName.includes('sokheng') || cleanName.includes('run')) {
+      defaultPhoto = 'assets/run_sokheng.jpg';
+    } else if (cleanUser === 'kimhuoy' || cleanUser === 'choukimhuoy' || cleanName.includes('kimhuoy') || cleanName.includes('chou')) {
       defaultPhoto = 'assets/chou_kimhuoy.jpg';
     } else if (cleanUser === 'sovanlyseth' || cleanName.includes('sovanlyseth')) {
       defaultPhoto = 'assets/sovanlyseth.jpg';
@@ -462,6 +493,8 @@ class StorageManager {
       found = admins.find(a => a.username === 'sovanlyseth');
     } else if (clean.includes('kimhuoy') || clean.includes('huoy') || clean.includes('chou') || clean.includes('choukimhuoy')) {
       found = admins.find(a => a.username === 'kimhuoy' || a.username === 'choukimhuoy');
+    } else if (clean.includes('runsokheng') || clean.includes('sokheng') || clean.includes('heng') || clean === 'run') {
+      found = admins.find(a => a.username === 'runsokheng' || a.username === 'sokheng');
     }
 
     if (found) {
@@ -633,6 +666,11 @@ class StorageManager {
               activeSession.photo = 'assets/chou_kimhuoy.jpg';
             }
           }
+          if (u === 'runsokheng' || u === 'sokheng' || (activeSession.name && (activeSession.name.toLowerCase().includes('sokheng') || activeSession.name.toLowerCase().includes('run')))) {
+            if (!activeSession.photo || activeSession.photo.includes('favicon') || activeSession.photo.includes('robot')) {
+              activeSession.photo = 'assets/run_sokheng.jpg';
+            }
+          }
           sessionStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(activeSession));
         }
         try {
@@ -690,6 +728,12 @@ class StorageManager {
               if (!a.photo || a.photo.includes('favicon') || a.photo.includes('robot')) {
                 updated = true;
                 return { ...a, photo: 'assets/chou_kimhuoy.jpg' };
+              }
+            }
+            if (u === 'runsokheng' || u === 'sokheng' || (a.name && (a.name.toLowerCase().includes('sokheng') || a.name.toLowerCase().includes('run')))) {
+              if (!a.photo || a.photo.includes('favicon') || a.photo.includes('robot')) {
+                updated = true;
+                return { ...a, photo: 'assets/run_sokheng.jpg' };
               }
             }
             return a;
@@ -835,6 +879,8 @@ class StorageManager {
                 photo = 'assets/sovanlyseth.jpg';
               } else if ((a.username === 'kimhuoy' || a.username === 'choukimhuoy' || (a.name && (a.name.toLowerCase().includes('kimhuoy') || a.name.toLowerCase().includes('huoy') || a.name.toLowerCase().includes('chou')))) && (!photo || photo.includes('favicon') || photo.includes('robot'))) {
                 photo = 'assets/chou_kimhuoy.jpg';
+              } else if ((a.username === 'runsokheng' || a.username === 'sokheng' || (a.name && (a.name.toLowerCase().includes('sokheng') || a.name.toLowerCase().includes('run')))) && (!photo || photo.includes('favicon') || photo.includes('robot'))) {
+                photo = 'assets/run_sokheng.jpg';
               } else if ((!photo || photo.includes('favicon') || photo.includes('robot')) && defaultEntry.photo) {
                 photo = defaultEntry.photo;
               }

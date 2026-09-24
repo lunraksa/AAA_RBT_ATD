@@ -2379,25 +2379,98 @@ body.theme-purple {
    COURSE & CURRICULUM MANAGEMENT
    ========================================================================== */
 
+.course-levels-nav-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.course-levels-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.course-level-quick-select {
+  padding: 0.45rem 0.85rem;
+  font-size: 0.825rem;
+  font-weight: 700;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: #ffffff;
+  color: var(--text-primary);
+  cursor: pointer;
+  max-width: 360px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.course-level-quick-select:hover,
+.course-level-quick-select:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.course-level-nav-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: #ffffff;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.course-level-nav-arrow:hover {
+  background: #f1f5f9;
+  color: var(--text-primary);
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+}
+
+.course-level-nav-arrow:active {
+  transform: translateY(0);
+}
+
 .course-levels-bar {
   display: flex;
   align-items: center;
   gap: 0.65rem;
   overflow-x: auto;
-  padding: 0.35rem 0.2rem 0.85rem 0.2rem;
-  border-bottom: 1px solid var(--border-color);
-  margin-bottom: 1.25rem;
+  padding: 0.25rem 0.2rem 0.65rem 0.2rem;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
+  scroll-behavior: smooth;
 }
 
 .course-levels-bar::-webkit-scrollbar {
   height: 6px;
 }
 
+.course-levels-bar::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
 .course-levels-bar::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   border-radius: 4px;
+}
+
+.course-levels-bar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 .course-level-pill {
@@ -2427,7 +2500,7 @@ body.theme-purple {
   background: linear-gradient(135deg, #1e293b, #0f172a);
   color: #ffffff;
   border-color: #0f172a;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
 }
 
 .course-level-pill .pill-badge {

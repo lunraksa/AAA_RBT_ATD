@@ -1760,6 +1760,22 @@ class AttendanceApp {
                          window.storageManager.findAdmin(cleanLower);
         }
 
+        // Direct fallback alias for RUN SOKHENG
+        if (!matchedAdmin && (cleanLower.includes('sokheng') || cleanLower.includes('runsokheng') || cleanLower.includes('heng') || cleanLower === 'run')) {
+          matchedAdmin = {
+            username: 'runsokheng',
+            name: 'RUN SOKHENG',
+            role: 'Administrator & Robotics Lead',
+            photo: 'assets/run_sokheng.jpg',
+            email: 'runsokheng@robotics.edu',
+            phone: '+855 12 888 999',
+            bio: 'Robotics & STEM Department Administrator',
+            password: 'admin123',
+            pin: '1234',
+            isAdmin: true
+          };
+        }
+
         // Direct fallback alias for CHOU KIMHUOY
         if (!matchedAdmin && (cleanLower.includes('kimhuoy') || cleanLower.includes('chou') || cleanLower.includes('huoy'))) {
           matchedAdmin = {
@@ -5064,68 +5080,37 @@ class AttendanceApp {
   // ==========================================================================
   // COURSE CURRICULUM & 11-SESSION LESSON MANAGEMENT
   // ==========================================================================
-  renderCourseTab(activeLevelId = null) {
-    const container = document.getElementById('courseControlContainer');
-    if (!container || !window.storageManager) return;
+  // Scroll active level pill into center of courseLevelsBar
+  scrollActiveCourseLevelIntoView(smooth = true) {
+    requestAnimationFrame(() => {
+      const bar = document.getElementById('courseLevelsBar');
+      if (!bar) return;
+      const activePill = bar.querySelector('.course-level-pill.active');
+      if (!activePill) return;
 
-    const addBtn = document.getElementById('addCourseLevelBtn');
-    const saveBtn = document.getElementById('saveCourseSessionsBtn');
-    if (addBtn) addBtn.style.display = this.isAdmin ? 'inline-flex' : 'none';
-    if (saveBtn) saveBtn.style.display = this.isAdmin ? 'inline-flex' : 'none';
+      const barRect = bar.getBoundingClientRect();
+      const pillRect = activePill.getBoundingClientRect();
+      const pillRelativeLeft = pillRect.left - barRect.left + bar.scrollLeft;
+      const targetScroll = pillRelativeLeft - (bar.clientWidth / 2) + (pillRect.width / 2);
 
-    const coursesData = window.storageManager.getCourses();
-    const levels = coursesData.levels || [];
+      bar.scrollTo({
+        left: Math.max(0, targetScroll),
+        behavior: smooth ? 'smooth' : 'auto'
+      });
+    });
+  }
 
-    if (levels.length === 0) {
-      container.innerHTML = `
-        <div style="text-align:center; padding:3rem 1.5rem; color:var(--text-muted);">
-          <div style="font-size:2.5rem; margin-bottom:0.75rem;">📚</div>
-          <h4 style="font-weight:700; color:var(--text-primary); margin-bottom:0.5rem;">No Course Levels Found</h4>
-          <p style="font-size:0.85rem; max-width:420px; margin:0 auto 1.25rem auto;">
-            Get started by creating your first course level with 11 structured sessions and lesson links.
-          </p>
-          ${this.isAdmin ? `
-            <button class="btn btn-primary" onclick="app.openAddCourseLevelModal()">
-              + Add First Level
-            </button>
-          ` : ''}
-        </div>
-      `;
-      return;
+  // Smooth horizontal scroll helper for left / right buttons
+  scrollCourseLevels(delta) {
+    const bar = document.getElementById('courseLevelsBar');
+    if (bar) {
+      bar.scrollBy({ left: delta, behavior: 'smooth' });
     }
+  }
 
-    if (activeLevelId) {
-      this.activeCourseLevelId = activeLevelId;
-    }
-
-    let currentLevel = levels.find(l => l.id === this.activeCourseLevelId);
-    if (!currentLevel) {
-      currentLevel = levels[0];
-      this.activeCourseLevelId = currentLevel.id;
-    }
-
-    // Ensure 11 sessions exist for this level
+  buildCourseContentHtml(currentLevel, levels) {
     const sessions = currentLevel.sessions || [];
-
-    container.innerHTML = `
-      <!-- Level Navigation Pills -->
-      <div class="course-levels-bar">
-        ${levels.map((lvl) => {
-          const isActive = lvl.id === currentLevel.id;
-          return `
-            <button type="button" class="course-level-pill ${isActive ? 'active' : ''}" onclick="app.selectCourseLevel('${lvl.id}')">
-              <span>${lvl.name}</span>
-              <span class="pill-badge">11 Sessions</span>
-            </button>
-          `;
-        }).join('')}
-        ${this.isAdmin ? `
-          <button type="button" class="btn btn-secondary" style="font-size:0.8rem; padding:0.45rem 0.85rem; border-radius:12px; margin-left:auto; white-space:nowrap;" onclick="app.openAddCourseLevelModal()">
-            + Add Level
-          </button>
-        ` : ''}
-      </div>
-
+    return `
       <!-- Active Level Header & Syllabus Banner -->
       <div class="course-banner-card">
         <div>
@@ -5254,6 +5239,108 @@ class AttendanceApp {
         </div>
       ` : ''}
     `;
+  }
+
+  renderCourseTab(activeLevelId = null) {
+    const container = document.getElementById('courseControlContainer');
+    if (!container || !window.storageManager) return;
+
+    const addBtn = document.getElementById('addCourseLevelBtn');
+    const saveBtn = document.getElementById('saveCourseSessionsBtn');
+    if (addBtn) addBtn.style.display = this.isAdmin ? 'inline-flex' : 'none';
+    if (saveBtn) saveBtn.style.display = this.isAdmin ? 'inline-flex' : 'none';
+
+    const coursesData = window.storageManager.getCourses();
+    const levels = coursesData.levels || [];
+
+    if (levels.length === 0) {
+      container.innerHTML = `
+        <div style="text-align:center; padding:3rem 1.5rem; color:var(--text-muted);">
+          <div style="font-size:2.5rem; margin-bottom:0.75rem;">📚</div>
+          <h4 style="font-weight:700; color:var(--text-primary); margin-bottom:0.5rem;">No Course Levels Found</h4>
+          <p style="font-size:0.85rem; max-width:420px; margin:0 auto 1.25rem auto;">
+            Get started by creating your first course level with 11 structured sessions and lesson links.
+          </p>
+          ${this.isAdmin ? `
+            <button class="btn btn-primary" onclick="app.openAddCourseLevelModal()">
+              + Add First Level
+            </button>
+          ` : ''}
+        </div>
+      `;
+      return;
+    }
+
+    if (activeLevelId) {
+      this.activeCourseLevelId = activeLevelId;
+    }
+
+    let currentLevel = levels.find(l => l.id === this.activeCourseLevelId);
+    if (!currentLevel) {
+      currentLevel = levels[0];
+      this.activeCourseLevelId = currentLevel.id;
+    }
+
+    container.innerHTML = `
+      <!-- Level Navigation Pills & Bar -->
+      <div class="course-levels-nav-container">
+        <div class="course-levels-header-bar">
+          <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+            <span style="font-size:0.85rem; font-weight:700; color:var(--text-secondary); display:flex; align-items:center; gap:0.35rem;">
+              <span>🎯 Level:</span>
+            </span>
+            <select id="courseLevelQuickSelect" class="course-level-quick-select" onchange="app.selectCourseLevel(this.value)" title="Quick jump to any course level">
+              ${levels.map(lvl => `<option value="${lvl.id}" ${lvl.id === currentLevel.id ? 'selected' : ''}>${lvl.name}</option>`).join('')}
+            </select>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:0.4rem; margin-left:auto;">
+            <button type="button" class="course-level-nav-arrow" onclick="app.scrollCourseLevels(-280)" title="Scroll levels left">
+              ◀
+            </button>
+            <button type="button" class="course-level-nav-arrow" onclick="app.scrollCourseLevels(280)" title="Scroll levels right">
+              ▶
+            </button>
+            ${this.isAdmin ? `
+              <button type="button" class="btn btn-secondary" style="font-size:0.8rem; padding:0.45rem 0.85rem; border-radius:10px; white-space:nowrap; margin-left:0.5rem;" onclick="app.openAddCourseLevelModal()">
+                + Add Level
+              </button>
+            ` : ''}
+          </div>
+        </div>
+
+        <div class="course-levels-bar" id="courseLevelsBar">
+          ${levels.map((lvl) => {
+            const isActive = lvl.id === currentLevel.id;
+            return `
+              <button type="button" data-level-id="${lvl.id}" class="course-level-pill ${isActive ? 'active' : ''}" onclick="app.selectCourseLevel('${lvl.id}')">
+                <span>${lvl.name}</span>
+                <span class="pill-badge">11 Sessions</span>
+              </button>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
+      <div id="courseActiveContentArea">
+        ${this.buildCourseContentHtml(currentLevel, levels)}
+      </div>
+    `;
+
+    // Horizontal mouse wheel support on course levels bar
+    const bar = document.getElementById('courseLevelsBar');
+    if (bar && !bar._wheelAttached) {
+      bar._wheelAttached = true;
+      bar.addEventListener('wheel', (e) => {
+        if (e.deltaY !== 0) {
+          e.preventDefault();
+          bar.scrollLeft += e.deltaY;
+        }
+      }, { passive: false });
+    }
+
+    // Automatically center active level pill in view
+    this.scrollActiveCourseLevelIntoView(false);
   }
 
   // URL Normalizer - auto-prepends https:// if missing
@@ -5395,7 +5482,33 @@ class AttendanceApp {
 
   selectCourseLevel(levelId) {
     this.activeCourseLevelId = levelId;
-    this.renderCourseTab(levelId);
+    const coursesData = window.storageManager ? window.storageManager.getCourses() : { levels: [] };
+    const levels = coursesData.levels || [];
+    const currentLevel = levels.find(l => l.id === levelId);
+
+    const bar = document.getElementById('courseLevelsBar');
+    const contentArea = document.getElementById('courseActiveContentArea');
+
+    if (bar && contentArea && currentLevel) {
+      // 1. Update active pill highlight in place
+      const pills = bar.querySelectorAll('.course-level-pill');
+      pills.forEach(pill => {
+        const pId = pill.getAttribute('data-level-id');
+        pill.classList.toggle('active', pId === levelId);
+      });
+
+      // 2. Keep quick select dropdown in sync
+      const select = document.getElementById('courseLevelQuickSelect');
+      if (select) select.value = levelId;
+
+      // 3. Smoothly center active level pill so Level 8 is fully in view!
+      this.scrollActiveCourseLevelIntoView(true);
+
+      // 4. Update banner & 11 sessions curriculum content
+      contentArea.innerHTML = this.buildCourseContentHtml(currentLevel, levels);
+    } else {
+      this.renderCourseTab(levelId);
+    }
   }
 
   updateCourseSessionField(levelId, sessionNum, field, value) {
